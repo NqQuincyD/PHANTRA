@@ -285,7 +285,16 @@ def visited_webs():
     # If Admin, fetch all users from the User table to populate the dropdown
     all_users = []
     if current_user.is_authenticated and current_user.role == 'Admin':
-        all_users = User.query.filter_by(role='User').all()
+        # Get local users
+        local_users = {u.username: u for u in User.query.filter_by(role='User').all()}
+        # Get global users from Firebase
+        global_users_data = FirebaseDB.get_global_users()
+        
+        # Merge them (prioritizing global data for a complete view)
+        global_usernames = [u['username'] for u in global_users_data if u.get('role') == 'User']
+        
+        # Return a list of unique usernames for the dropdown
+        all_users = sorted(list(set(list(local_users.keys()) + global_usernames)))
     
     username = (
         request.form.get('username')
@@ -657,7 +666,13 @@ def visited_applications():
     # If Admin, fetch all users
     all_users = []
     if current_user.is_authenticated and current_user.role == 'Admin':
-        all_users = User.query.filter_by(role='User').all()
+        # Get local users
+        local_users = {u.username: u for u in User.query.filter_by(role='User').all()}
+        # Get global users from Firebase
+        global_users_data = FirebaseDB.get_global_users()
+        # Merge them
+        global_usernames = [u['username'] for u in global_users_data if u.get('role') == 'User']
+        all_users = sorted(list(set(list(local_users.keys()) + global_usernames)))
     
     if request.method == 'POST':
         try:

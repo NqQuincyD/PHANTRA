@@ -127,7 +127,20 @@ def monitoring_hub():
         flash('Access denied', 'danger')
         return redirect(url_for('auth.login'))
 
-    users = User.query.order_by(User.id.desc()).all()
+    # Get local users
+    local_users = User.query.order_by(User.id.desc()).all()
+    # Get global users from Firebase
+    global_users_data = FirebaseDB.get_global_users()
+    
+    # Create a consolidated list for display
+    # We use a dictionary keyed by username to avoid duplicates
+    consolidated_users = {u.username: u for u in local_users}
+    for gu in global_users_data:
+        if gu['username'] not in consolidated_users:
+            # Create a mock user object for display if not found locally
+            consolidated_users[gu['username']] = gu
+
+    users = consolidated_users.values()
     return render_template('admin/users.html', users=users)
 
 @adm_bp.route('/update-user/<int:user_id>', methods=['GET', 'POST'])

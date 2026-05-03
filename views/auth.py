@@ -5,6 +5,7 @@ from werkzeug.security import generate_password_hash
 from forms import RegistrationForm, LoginForm
 from models import db, User, AuthLog
 from utils.logger import log_auth_event
+from utils.firebase_db import FirebaseDB
 
 
 auth_bp = Blueprint('auth', __name__)
@@ -56,6 +57,14 @@ def login():
         # Successful login
         login_user(user)
         log_auth_event('login_success', user=user)
+        
+        # Sync user to Firebase on login
+        FirebaseDB.save_user(user.id, {
+            'username': user.username,
+            'email': user.email,
+            'role': user.role,
+            'last_login': datetime.utcnow()
+        })
         if user.role == 'User':
             return redirect(url_for('user.home'))
         elif user.role == 'Admin':
@@ -97,6 +106,14 @@ def register():
             db.session.add(user)
             db.session.commit()
             log_auth_event('register_success', user=user)  # Log successful registration
+
+            # Sync new user to Firebase
+            FirebaseDB.save_user(user.id, {
+                'username': user.username,
+                'email': user.email,
+                'role': user.role,
+                'created_at': datetime.utcnow()
+            })
 
             flash('Registration successful! Please login.', 'success')
             return redirect(url_for('auth.login'))

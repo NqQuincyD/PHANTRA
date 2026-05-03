@@ -138,6 +138,17 @@ class FirebaseDB:
         except Exception as e:
             print(f"Firestore error (save_application_usage): {e}")
             return False
+    @staticmethod
+    def get_global_users():
+        """Retrieves the list of all users synchronized to Firebase."""
+        if db_firestore is None:
+            return []
+        try:
+            docs = db_firestore.collection('users').stream()
+            return [doc.to_dict() for doc in docs]
+        except Exception as e:
+            print(f"Firestore error (get_global_users): {e}")
+            return []
 
 # Import firestore here to use constants like SERVER_TIMESTAMP
 from firebase_admin import firestore
