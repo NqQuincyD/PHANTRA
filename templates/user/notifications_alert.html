@@ -1,0 +1,210 @@
+{% extends 'user/base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between gap-3 mb-8">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-bell text-alert text-2xl"></i>
+            <div>
+                <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">Risk Alerts</h1>
+                <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">High-Risk Activity Telemetry & Incident Audit</p>
+            </div>
+        </div>
+        {% if notifications %}
+        <button class="px-4 py-2 border border-blue-500/30 bg-blue-500/10 text-blue-500 font-bold uppercase tracking-widest text-[10px] hover:bg-blue-500 hover:text-base-900 transition-all flex items-center gap-2" onclick="markAllRead()">
+            <i class="fas fa-check-double"></i> Acknowledge All
+        </button>
+        {% endif %}
+    </div>
+
+    {% if notifications %}
+    <div class="space-y-4">
+        {% for notification in notifications %}
+        <div class="content-card relative overflow-hidden border-l-4 {{ 'border-alert' if notification.risk == 'Critical' else 'border-orange-500' }}">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 border-b border-base-600 pb-4">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <span class="px-2 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-500/30 text-[10px] font-bold uppercase tracking-wider rounded font-mono">
+                        USR: {{ notification.username }}
+                    </span>
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">{{ notification.category }}</span>
+                    {% if notification.is_sensitive %}
+                    <span class="px-2 py-0.5 bg-alert/10 text-alert border border-alert/30 text-[10px] font-bold uppercase tracking-wider rounded">SENSITIVE</span>
+                    {% endif %}
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest {{ 'text-alert animate-pulse' if notification.risk == 'Critical' else 'text-orange-500' }}">
+                        <i class="fas fa-exclamation-triangle"></i> {{ notification.risk }} THREAT
+                    </span>
+                    <button class="text-gray-500 hover:text-white transition-colors" onclick="markAlertRead('{{ notification.history_id }}')" title="Acknowledge Record">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-white font-bold text-lg tracking-tight">{{ notification.title|truncate(120) }}</h3>
+                
+                <div class="p-3 bg-base-900/80 border border-base-600 font-mono text-[11px] text-gray-400 break-all select-none opacity-50 cursor-not-allowed notification-url" title="Endpoint locked for security reasons">
+                    {{ notification.url }}
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Origin Domain</label>
+                        <p class="text-xs font-mono text-gray-300 truncate">{{ notification.domain }}</p>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Incident Hits</label>
+                        <p class="text-xs font-mono text-gray-300">{{ notification.visit_count }}</p>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Threat Vector</label>
+                        <p class="text-xs font-mono text-accent font-bold">{{ notification.threat_score }}</p>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Anomaly Flux</label>
+                        <p class="text-xs font-mono text-gray-300">{{ notification.anomaly_score }}</p>
+                    </div>
+                </div>
+
+                {% if notification.recommendation %}
+                <div class="p-3 bg-accent/5 border border-accent/20 rounded flex items-start gap-3">
+                    <i class="fas fa-shield-alt text-accent mt-0.5"></i>
+                    <p class="text-xs text-accent/80 font-medium leading-relaxed">
+                        <span class="font-bold uppercase tracking-widest mr-2">Directive:</span> {{ notification.recommendation }}
+                    </p>
+                </div>
+                {% endif %}
+
+                {% if current_user.role == 'Admin' %}
+                <div class="pt-4 border-t border-base-600 flex flex-wrap gap-2">
+                    <button onclick="takeAction('{{ notification.username }}', 'Warning')" class="px-3 py-1.5 bg-orange-500/10 text-orange-500 border border-orange-500/30 text-[10px] font-bold uppercase tracking-widest hover:bg-orange-500 hover:text-base-900 transition-all flex items-center gap-2">
+                        <i class="fas fa-exclamation-triangle"></i> Issue Warning
+                    </button>
+                    <button onclick="takeAction('{{ notification.username }}', 'Suspend')" class="px-3 py-1.5 bg-alert/10 text-alert border border-alert/30 text-[10px] font-bold uppercase tracking-widest hover:bg-alert hover:text-base-900 transition-all flex items-center gap-2">
+                        <i class="fas fa-ban"></i> Suspend Node
+                    </button>
+                    <button onclick="takeAction('{{ notification.username }}', 'Resolve')" class="px-3 py-1.5 bg-accent/10 text-accent border border-accent/30 text-[10px] font-bold uppercase tracking-widest hover:bg-accent hover:text-base-900 transition-all flex items-center gap-2">
+                        <i class="fas fa-check"></i> Resolve Incident
+                    </button>
+                </div>
+                {% else %}
+                {% if admin_messages %}
+                <div class="p-4 bg-orange-500/5 border border-orange-500/20 rounded space-y-3">
+                    <h4 class="text-[10px] font-bold text-orange-500 uppercase tracking-widest flex items-center gap-2">
+                        <i class="fas fa-envelope"></i> Command Directives
+                    </h4>
+                    <ul class="space-y-2">
+                        {% for msg in admin_messages %}
+                        <li class="text-[11px] text-orange-200/70 list-disc list-inside">
+                            {{ msg.details }} <span class="text-[9px] opacity-50 ml-2 font-mono">[{{ msg.timestamp }}]</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+
+            <div class="mt-6 text-[10px] font-mono text-gray-500 uppercase tracking-widest text-right">
+                Detection Timestamp: {{ notification.timestamp }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="content-card py-16 flex flex-col items-center justify-center text-center space-y-4">
+        <div class="w-16 h-16 bg-accent/10 border border-accent/30 rounded-full flex items-center justify-center text-accent">
+            <i class="fas fa-check-circle text-3xl"></i>
+        </div>
+        <div>
+            <h3 class="text-sm font-bold text-gray-300 uppercase tracking-widest">Sector Clear</h3>
+            <p class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">No high-risk activity detected in monitored channels</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlElements = document.querySelectorAll('.notification-url');
+        urlElements.forEach(element => {
+            element.addEventListener('contextmenu', e => {
+                e.preventDefault();
+                alert('Incident telemetry endpoints are locked for security audit purposes.');
+            });
+        });
+    });
+
+    function takeAction(username, action) {
+        if (!confirm(`CONFIRM: ${action.toUpperCase()} operation for node ${username}?`)) return;
+
+        fetch('/user/take-action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, action })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(`SUCCESS: Directive ${action} propagated to ${username}.`);
+                window.location.reload();
+            } else {
+                alert(`FAILURE: Access denied - ${data.message}`);
+            }
+        })
+        .catch(error => {
+            console.error('Telepathy Error:', error);
+            alert('CRITICAL: Communication failure with security core.');
+        });
+    }
+
+    function markAlertRead(historyId) {
+        if (!historyId) return;
+        
+        fetch('/user/mark-alert-read', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ history_ids: [historyId] })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.reload();
+            } else {
+                alert('Error acknowledging incident: ' + data.message);
+            }
+        })
+        .catch(error => console.error('Signal Loss:', error));
+    }
+
+    function markAllRead() {
+        const historyIds = [];
+        document.querySelectorAll('.content-card').forEach(card => {
+            const btn = card.querySelector('button[onclick*="markAlertRead"]');
+            if (btn) {
+                const match = btn.getAttribute('onclick').match(/'([^']+)'/);
+                if (match) historyIds.push(match[1]);
+            }
+        });
+
+        if (historyIds.length === 0) return;
+        if (!confirm('Acknowledge all current threat telemetry?')) return;
+
+        fetch('/user/mark-alert-read', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ history_ids: historyIds })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.reload();
+            } else {
+                alert('Sync failure: ' + data.message);
+            }
+        })
+        .catch(error => console.error('Global Sync Error:', error));
+    }
+</script>
+{% endblock %}

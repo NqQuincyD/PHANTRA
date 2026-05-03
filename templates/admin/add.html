@@ -1,0 +1,72 @@
+{% extends "user/base.html" %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="flex items-center gap-3 mb-6 border-b border-base-600 pb-4">
+        <i class="fas fa-user-plus text-alert text-2xl"></i>
+        <div>
+            <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">Provision New Entity</h1>
+            <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">ID_AUTH: REGISTER_CREDENTIALS // SYSTEM_PROVISIONING</p>
+        </div>
+    </div>
+    
+    <div class="content-card">
+        <form method="POST" class="space-y-6">
+            {{ form.hidden_tag() }}
+
+            <div class="space-y-2">
+                {{ form.username.label(class_="block text-[10px] font-bold text-gray-500 uppercase tracking-widest") }}
+                {{ form.username(class_="w-full bg-base-900 border border-base-600 text-white px-4 py-3 focus:border-alert focus:outline-none transition-colors font-mono placeholder-gray-700 uppercase tracking-tight text-sm", placeholder="SYS_OPERATOR_01") }}
+            </div>
+
+            <div class="space-y-2">
+                {{ form.email.label(class_="block text-[10px] font-bold text-gray-500 uppercase tracking-widest") }}
+                {{ form.email(class_="w-full bg-base-900 border border-base-600 text-white px-4 py-3 focus:border-alert focus:outline-none transition-colors font-mono placeholder-gray-700 text-sm", placeholder="operator@phantra.sys") }}
+            </div>
+
+            <div class="space-y-2 relative">
+                {{ form.password.label(class_="block text-[10px] font-bold text-gray-500 uppercase tracking-widest") }}
+                {{ form.password(class_="w-full bg-base-900 border border-base-600 text-white px-4 py-3 focus:border-alert focus:outline-none transition-colors font-mono pr-12 text-sm", placeholder="••••••••") }}
+                <button type="button" class="absolute right-0 bottom-0 h-[52px] px-4 text-gray-600 hover:text-white transition-colors" onclick="togglePassword()">
+                    <i id="eye-icon" class="fas fa-eye text-xs"></i>
+                </button>
+            </div>
+
+            <div class="space-y-2">
+                {{ form.role.label(class_="block text-[10px] font-bold text-gray-500 uppercase tracking-widest") }}
+                <div class="relative">
+                    {{ form.role(class_="w-full bg-base-900 border border-base-600 text-white px-4 py-3 focus:border-alert focus:outline-none transition-colors appearance-none font-mono uppercase tracking-tight text-sm") }}
+                    <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-600">
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-6 flex flex-col sm:flex-row gap-3">
+                <button type="submit" class="flex-1 bg-alert text-white py-4 font-bold uppercase tracking-widest text-[11px] hover:bg-alert-dark transition-colors border border-alert">
+                    <i class="fas fa-check-circle mr-2"></i> Commit Provisioning
+                </button>
+                <a href="{{ url_for('admin.monitoring_hub') }}" class="flex-1 border border-base-600 text-gray-400 py-4 font-bold uppercase tracking-widest text-[11px] hover:bg-base-800 hover:text-white transition-colors text-center">
+                    <i class="fas fa-times-circle mr-2"></i> Abort Operation
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function togglePassword() {
+    const passwordField = document.querySelector('input[name="password"]');
+    const eyeIcon = document.getElementById('eye-icon');
+    if (passwordField.type === "password") {
+        passwordField.type = "text";
+        eyeIcon.classList.remove('fa-eye');
+        eyeIcon.classList.add('fa-eye-slash');
+    } else {
+        passwordField.type = "password";
+        eyeIcon.classList.remove('fa-eye-slash');
+        eyeIcon.classList.add('fa-eye');
+    }
+}
+</script>
+{% endblock %}

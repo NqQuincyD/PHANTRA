@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+
+# Flask/SQLAlchemy
+instance/
+*.db
+*.db-journal
+
+# Firebase Secrets (DO NOT PUSH)
+serviceAccountKey.json
+
+# Monitoring/Reports
+monitoring_report.xlsx
+monitoring_data/
+browser_history_exports/
+static/uploads/*
+!static/uploads/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db

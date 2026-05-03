@@ -1,0 +1,294 @@
+{% extends 'user/base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center gap-3 mb-8">
+        <i class="fas fa-satellite-dish text-accent text-2xl"></i>
+        <div>
+            <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">Command Interface</h1>
+            <p class="text-xs text-gray-500 uppercase tracking-widest mt-1 flex items-center gap-2">
+                System Status: <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span> Monitoring Operational
+            </p>
+        </div>
+    </div>
+
+    <!-- Quick Links / Threat Intel Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <a href="{{ url_for('user.notifications') }}" class="content-card group hover:border-alert transition-all hover:shadow-[0_0_20px_rgba(255,0,60,0.1)] block">
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 border border-alert/30 text-alert flex items-center justify-center group-hover:bg-alert/10 transition-colors">
+                    <i class="fas fa-radiation text-xl"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Active Alerts</h3>
+                    <div class="text-3xl font-black text-white font-sans my-1">{{ critical_alerts_count }}</div>
+                    <p class="text-[9px] text-gray-600 uppercase tracking-wider">Critical Intercepts</p>
+                </div>
+                <i class="fas fa-arrow-right text-gray-700 group-hover:text-alert transition-colors transform group-hover:translate-x-1"></i>
+            </div>
+        </a>
+        
+        <a href="{{ url_for('user.anomaly_detection') }}" class="content-card group hover:border-orange-500 transition-all hover:shadow-[0_0_20px_rgba(249,115,22,0.1)] block">
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 border border-orange-500/30 text-orange-500 flex items-center justify-center group-hover:bg-orange-500/10 transition-colors">
+                    <i class="fas fa-project-diagram text-xl"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Neural Engine</h3>
+                    <div class="text-3xl font-black text-white font-sans my-1">LIVE</div>
+                    <p class="text-[9px] text-gray-600 uppercase tracking-wider">Pattern Monitoring</p>
+                </div>
+                <i class="fas fa-arrow-right text-gray-700 group-hover:text-orange-500 transition-colors transform group-hover:translate-x-1"></i>
+            </div>
+        </a>
+        
+        <a href="{{ url_for('user.reports_analytics') }}" class="content-card group hover:border-blue-500 transition-all hover:shadow-[0_0_20px_rgba(59,130,246,0.1)] block">
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 border border-blue-500/30 text-blue-500 flex items-center justify-center group-hover:bg-blue-500/10 transition-colors">
+                    <i class="fas fa-chart-network text-xl"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Risk Analysis</h3>
+                    <div class="text-3xl font-black text-white font-sans my-1">READY</div>
+                    <p class="text-[9px] text-gray-600 uppercase tracking-wider">Heuristic Output</p>
+                </div>
+                <i class="fas fa-arrow-right text-gray-700 group-hover:text-blue-500 transition-colors transform group-hover:translate-x-1"></i>
+            </div>
+        </a>
+    </div>
+
+    {% if current_user.role == 'Admin' %}
+    <div class="mt-12 space-y-4">
+        <h2 class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] border-b border-base-600 pb-2 flex items-center gap-2">
+            <i class="fas fa-shield-alt text-alert"></i> Administrative Telemetry Buffer
+        </h2>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div class="content-card border-l-2 border-l-purple-500">
+                <div class="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    <i class="fas fa-users text-purple-500"></i> Entity Count
+                </div>
+                <div class="text-3xl font-black text-white">{{ total_users }}</div>
+            </div>
+            <div class="content-card border-l-2 border-l-teal-500">
+                <div class="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    <i class="fas fa-fingerprint text-teal-500"></i> Session Logs
+                </div>
+                <div class="text-3xl font-black text-white">{{ total_auth_events }}</div>
+            </div>
+            <div class="content-card border-l-2 border-l-alert">
+                <div class="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    <i class="fas fa-biohazard text-alert"></i> Breach Attempts
+                </div>
+                <div class="text-3xl font-black text-alert">{{ auth_counts[1] }}</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="content-card">
+                <div class="flex items-center justify-between border-b border-base-600 pb-3 mb-6">
+                    <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <i class="fas fa-user-shield text-blue-500"></i> Role Distribution
+                    </h3>
+                </div>
+                <div class="h-[250px] relative">
+                    <canvas id="rolesChart"></canvas>
+                </div>
+            </div>
+            <div class="content-card">
+                <div class="flex items-center justify-between border-b border-base-600 pb-3 mb-6">
+                    <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <i class="fas fa-key text-accent"></i> Auth Success/Fail Rate
+                    </h3>
+                </div>
+                <div class="h-[250px] relative">
+                    <canvas id="authChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="mt-12 space-y-4">
+        <h2 class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] border-b border-base-600 pb-2 flex items-center gap-2">
+            <i class="fas fa-radar text-accent"></i> Global Risk Vector Mapping
+        </h2>
+        <div class="content-card">
+            <div class="h-[300px] relative">
+                <canvas id="riskAnalysisChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-12 space-y-4">
+        <h2 class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] border-b border-base-600 pb-2 flex items-center gap-2">
+            <i class="fas fa-server text-blue-500"></i> Local Node Health
+        </h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="content-card">
+                <div class="flex items-start gap-4">
+                    <div class="w-14 h-14 border border-blue-500/30 text-blue-500 flex items-center justify-center bg-blue-500/5">
+                        <i class="fab fa-windows text-2xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-[10px] font-bold text-white uppercase tracking-widest border-b border-base-600 pb-2 mb-3">Kernel Information</h3>
+                        <div class="space-y-3 text-[11px]">
+                            <div class="flex justify-between border-b border-base-700 pb-1"><span class="text-gray-500 uppercase">OS Arch:</span> <span class="text-gray-300 font-bold">{{ system_info.os_name }} {{ system_info.os_release }}</span></div>
+                            <div class="flex justify-between border-b border-base-700 pb-1"><span class="text-gray-500 uppercase">Revision:</span> <span class="text-gray-300 font-bold">{{ system_info.os_version }}</span></div>
+                            <div class="flex justify-between border-b border-base-700 pb-1"><span class="text-gray-500 uppercase">Node ID:</span> <span class="text-gray-300 font-bold font-mono">{{ system_info.hostname }}</span></div>
+                            <div class="flex justify-between"><span class="text-gray-500 uppercase">Operator:</span> <span class="text-gray-300 font-bold">{{ system_info.username }}</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content-card">
+                <div class="flex items-start gap-4">
+                    <div class="w-14 h-14 border border-accent/30 text-accent flex items-center justify-center bg-accent/5">
+                        <i class="fas fa-microchip text-2xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-[10px] font-bold text-white uppercase tracking-widest border-b border-base-600 pb-2 mb-3">Resource Allocation</h3>
+                        <div class="text-[11px] flex justify-between mb-3 font-mono">
+                            <span class="text-gray-500 uppercase">Buffer Usage:</span> 
+                            <span class="text-gray-300 font-bold">{{ system_info.ram_used }}GB / {{ system_info.ram_total }}GB</span>
+                        </div>
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between text-[9px] font-bold text-gray-500 uppercase tracking-widest">
+                                <span>Memory Pressure</span>
+                                <span class="{% if system_info.ram_percent > 85 %}text-alert{% elif system_info.ram_percent > 60 %}text-orange-500{% else %}text-accent{% endif %}">{{ system_info.ram_percent }}%</span>
+                            </div>
+                            <div class="h-2 bg-base-900 border border-base-700 overflow-hidden p-[1px]">
+                                <div class="h-full {% if system_info.ram_percent > 85 %}bg-alert shadow-[0_0_10px_rgba(255,0,60,0.5)]{% elif system_info.ram_percent > 60 %}bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]{% else %}bg-accent shadow-[0_0_10px_rgba(0,255,65,0.5)]{% endif %} transition-all duration-1000" style="width: {{ system_info.ram_percent }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    Chart.defaults.color = '#666';
+    Chart.defaults.font.family = "'JetBrains Mono', monospace";
+    Chart.defaults.font.size = 10;
+    
+    const gridStyle = {
+        color: '#1a1a1a',
+        drawBorder: false,
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('riskAnalysisChart').getContext('2d');
+        
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: JSON.parse('{{ categories_json|safe }}'),
+                datasets: [{
+                    label: 'Risk Coefficient',
+                    data: JSON.parse('{{ scores_json|safe }}'),
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderColor: '#3b82f6',
+                    borderWidth: 1,
+                    barPercentage: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#000',
+                        titleColor: '#fff',
+                        bodyColor: '#3b82f6',
+                        borderColor: '#333',
+                        borderWidth: 1,
+                        padding: 12,
+                        displayColors: false,
+                        cornerRadius: 0
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: gridStyle,
+                        ticks: { color: '#444' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#666' }
+                    }
+                }
+            }
+        });
+        
+        {% if current_user.role == 'Admin' %}
+        const rolesCtx = document.getElementById('rolesChart').getContext('2d');
+        new Chart(rolesCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ roles_labels|tojson }},
+                datasets: [{
+                    data: {{ roles_counts|tojson }},
+                    backgroundColor: ['#00ff41', '#ff003c', '#3b82f6', '#a855f7'],
+                    borderColor: '#050505',
+                    borderWidth: 4,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '80%',
+                plugins: {
+                    legend: { 
+                        position: 'right', 
+                        labels: { 
+                            padding: 20, 
+                            color: '#666',
+                            usePointStyle: true,
+                            pointStyle: 'rect'
+                        } 
+                    }
+                }
+            }
+        });
+
+        const authCtx = document.getElementById('authChart').getContext('2d');
+        new Chart(authCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ auth_labels|tojson }},
+                datasets: [{
+                    data: {{ auth_counts|tojson }},
+                    backgroundColor: ['#00ff41', '#ff003c'],
+                    borderColor: '#050505',
+                    borderWidth: 4,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '80%',
+                plugins: {
+                    legend: { 
+                        position: 'right', 
+                        labels: { 
+                            padding: 20, 
+                            color: '#666',
+                            usePointStyle: true,
+                            pointStyle: 'rect'
+                        } 
+                    }
+                }
+            }
+        });
+        {% endif %}
+    });
+</script>
+{% endblock %}

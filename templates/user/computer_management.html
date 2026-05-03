@@ -1,0 +1,218 @@
+{% extends 'user/base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center gap-3 mb-8">
+        <i class="fas fa-laptop text-blue-500 text-2xl"></i>
+        <div>
+            <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">Registered Endpoints</h1>
+            <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">Asset Inventory & Node Authority Management</p>
+        </div>
+    </div>
+
+    <!-- Search/Filter Controls -->
+    <div class="content-card bg-base-900/50 border-base-700/50">
+        <div class="space-y-4">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-search text-gray-600 text-xs"></i>
+                <label class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Identify Node by Operator</label>
+            </div>
+            <div class="flex items-center gap-px">
+                <input type="text" id="searchByName" class="flex-1 bg-base-900 border border-base-600 text-xs text-gray-300 px-4 py-2.5 focus:border-blue-500 outline-none transition-colors" placeholder="ENTER OPERATOR NAME...">
+                <button id="searchByNameButton" class="px-6 py-2.5 bg-base-900 border border-base-600 text-[10px] font-bold text-gray-500 hover:text-white transition-colors border-l-0 uppercase tracking-widest">Execute</button>
+            </div>
+            <div id="searchResults" class="hidden absolute bg-base-900 border border-base-600 w-[calc(100%-2rem)] z-50 shadow-2xl max-h-48 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    {% if computers %}
+    <div class="content-card space-y-4">
+        <div class="flex items-center justify-between border-b border-base-600 pb-3">
+            <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <i class="fas fa-server text-blue-500"></i> Active Node Registry
+            </h3>
+            <span class="text-[9px] font-mono text-blue-400 bg-blue-500/10 px-2 py-0.5 border border-blue-500/20">{{ computers|length }} ASSETS</span>
+        </div>
+        
+        <div class="dataframe-container overflow-x-auto">
+            <table id="laptopsTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>DEVICE</th>
+                        <th>MODEL</th>
+                        <th>OS</th>
+                        <th>SERIAL NO.</th>
+                        <th>ASSIGNED TO</th>
+                        <th>STATUS</th>
+                        <th class="text-right">NODE OPS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for computer in computers %}
+                    <tr data-name="{{ computer.full_name.lower() }}">
+                        <td class="font-mono text-gray-600">{{ computer.id }}</td>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-laptop text-gray-500"></i>
+                                <span class="text-white font-bold">{{ computer.laptop_name }}</span>
+                            </div>
+                        </td>
+                        <td class="text-xs text-gray-400">{{ computer.laptop_model }}</td>
+                        <td>
+                            {% set os = computer.laptop_os.lower() %}
+                            <span class="px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border
+                                {% if 'windows' in os %}border-blue-500/30 bg-blue-500/10 text-blue-400
+                                {% elif 'mac' in os %}border-gray-500/30 bg-gray-500/10 text-gray-300
+                                {% elif 'linux' in os %}border-orange-500/30 bg-orange-500/10 text-orange-400
+                                {% else %}border-base-600 bg-base-900 text-gray-500{% endif %}">
+                                {{ computer.laptop_os }}
+                            </span>
+                        </td>
+                        <td class="font-mono text-[10px] text-gray-500">{{ computer.serial_number }}</td>
+                        <td>
+                            <div class="flex flex-col">
+                                <span class="text-white text-xs person-name">{{ computer.full_name }}</span>
+                                <span class="text-[9px] font-mono text-gray-600 uppercase">{{ computer.email }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% set status = computer.status.lower() %}
+                            <span class="status-badge px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border
+                                {% if status == 'active' %}border-green-500/30 bg-green-500/10 text-green-400
+                                {% else %}border-red-500/30 bg-red-500/10 text-red-400{% endif %}">
+                                {{ computer.status }}
+                            </span>
+                        </td>
+                        <td class="text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <button onclick="toggleFreeze({{ computer.id }}, this)" class="freeze-btn p-1.5 border border-base-600 hover:border-blue-500 hover:text-blue-400 transition-all text-gray-600" title="TOGGLE LOCK">
+                                    <i class="fas {% if status == 'active' %}fa-snowflake{% else %}fa-bolt animate-pulse{% endif %} text-[10px]"></i>
+                                </button>
+                                <button onclick="confirmDelete({{ computer.id }})" class="p-1.5 border border-base-600 hover:border-red-500 hover:text-red-400 transition-all text-gray-600" title="DECOMMISSION NODE">
+                                    <i class="fas fa-trash-alt text-[10px]"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="content-card border-dashed flex flex-col items-center justify-center py-20 text-gray-600">
+        <i class="fas fa-laptop-code text-4xl mb-4 opacity-20"></i>
+        <h3 class="text-[10px] font-bold uppercase tracking-widest">Node Registry Empty</h3>
+        <p class="text-[9px] uppercase tracking-wider mt-1">No assets found in the current inventory buffer.</p>
+    </div>
+    {% endif %}
+
+    <div class="flex justify-center">
+        <button onclick="window.location.href='{{ url_for('add_computers') }}'" class="px-8 py-3 bg-base-900 border border-base-600 text-[10px] font-bold text-gray-400 hover:text-white hover:border-blue-500 transition-all uppercase tracking-widest flex items-center gap-3">
+            <i class="fas fa-plus"></i> Register New Endpoint
+        </button>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('searchByName');
+        const searchResults = document.getElementById('searchResults');
+        const table = document.getElementById('laptopsTable');
+        
+        if (!table) return;
+
+        const allNames = Array.from(document.querySelectorAll('.person-name'))
+                            .map(el => el.textContent.trim())
+                            .filter((value, index, self) => self.indexOf(value) === index);
+        
+        searchInput.addEventListener('input', function() {
+            const term = this.value.toLowerCase();
+            searchResults.innerHTML = '';
+            
+            if (term.length < 1) {
+                searchResults.classList.add('hidden');
+                filterTableByName('');
+                return;
+            }
+            
+            const matched = allNames.filter(n => n.toLowerCase().includes(term));
+            
+            if (matched.length > 0) {
+                matched.forEach(name => {
+                    const div = document.createElement('div');
+                    div.className = 'px-4 py-2 cursor-pointer border-b border-base-800 text-xs text-gray-400 hover:bg-base-800 hover:text-white transition-colors uppercase tracking-widest font-bold';
+                    div.textContent = name;
+                    div.onclick = () => {
+                        searchInput.value = name;
+                        filterTableByName(name);
+                        searchResults.classList.add('hidden');
+                    };
+                    searchResults.appendChild(div);
+                });
+                searchResults.classList.remove('hidden');
+            } else {
+                searchResults.classList.add('hidden');
+            }
+        });
+        
+        function filterTableByName(name) {
+            const term = name.toLowerCase();
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const rowName = row.getAttribute('data-name');
+                row.classList.toggle('hidden', term !== '' && !rowName.includes(term));
+            });
+        }
+        
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                searchResults.classList.add('hidden');
+            }
+        });
+        
+        document.getElementById('searchByNameButton').onclick = () => filterTableByName(searchInput.value);
+        searchInput.onkeyup = (e) => { if(e.key === 'Enter') filterTableByName(searchInput.value); };
+    });
+
+    function toggleFreeze(id, btn) {
+        const isCurrentlyActive = btn.querySelector('i').classList.contains('fa-snowflake');
+        const nextStatus = isCurrentlyActive ? 'frozen' : 'active';
+        
+        fetch(`/update-laptop-status/${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: nextStatus })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const row = btn.closest('tr');
+                const badge = row.querySelector('.status-badge');
+                const icon = btn.querySelector('i');
+                
+                if (nextStatus === 'frozen') {
+                    icon.className = 'fas fa-bolt animate-pulse text-[10px]';
+                    badge.innerText = 'FROZEN';
+                    badge.className = 'status-badge px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border border-red-500/30 bg-red-500/10 text-red-400';
+                    btn.title = 'ACTIVATE NODE';
+                } else {
+                    icon.className = 'fas fa-snowflake text-[10px]';
+                    badge.innerText = 'ACTIVE';
+                    badge.className = 'status-badge px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border border-green-500/30 bg-green-500/10 text-green-400';
+                    btn.title = 'LOCK NODE';
+                }
+            }
+        });
+    }
+
+    function confirmDelete(id) {
+        if (confirm('DECOMMISSION NODE: ARE YOU CERTAIN? THIS ACTION CANNOT BE REVERTED.')) {
+            fetch(`/delete-laptop/${id}`, { method: 'DELETE' })
+            .then(r => r.json())
+            .then(data => { if (data.success) location.reload(); });
+        }
+    }
+</script>
+{% endblock %}

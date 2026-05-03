@@ -1,0 +1,77 @@
+{% extends 'user/base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between mb-6 border-b border-base-600 pb-4">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-satellite-dish text-alert text-2xl animate-pulse"></i>
+            <div>
+                <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">Live Threat Matrix</h1>
+                <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">Real-time Perimeter & Internal Monitoring</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="px-3 py-1 bg-accent/10 text-accent border border-accent/30 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                <span class="w-1.5 h-1.5 bg-accent rounded-full animate-ping"></span> Monitoring Active
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {% for i in range(1, 9) %}
+        <div class="content-card !p-4 border-l-2 {% if i == 3 %}border-l-alert bg-alert/5 animate-pulse{% else %}border-l-accent bg-accent/5{% endif %}">
+            <div class="flex justify-between items-start mb-2">
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Sector_0{{ i }}</span>
+                <i class="fas {% if i == 3 %}fa-exclamation-triangle text-alert{% else %}fa-check-shield text-accent{% endif %} text-xs"></i>
+            </div>
+            <div class="text-lg font-mono font-bold text-white mb-1">
+                {% if i == 3 %}INTERCEPTED{% else %}STABLE{% endif %}
+            </div>
+            <div class="text-[9px] text-gray-600 font-mono tracking-tighter uppercase">
+                LOAD: {{ (i * 12.5)|round(1) }}% // PTR: {{ 1000 + i*123 }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="content-card relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-4 opacity-5">
+            <i class="fas fa-shield-virus text-9xl"></i>
+        </div>
+        
+        <h4 class="text-xs text-gray-500 uppercase tracking-widest font-bold mb-6 border-b border-base-600 pb-2">Intercept Logs // Critical Buffer</h4>
+        
+        <div class="space-y-4">
+            <div class="flex gap-4 p-4 bg-alert/5 border border-alert/20">
+                <div class="text-alert pt-1">
+                    <i class="fas fa-radiation"></i>
+                </div>
+                <div class="flex-1">
+                    <div class="flex justify-between mb-1">
+                        <span class="text-[10px] font-bold text-white uppercase tracking-widest">Brute Force Attempt Detected</span>
+                        <span class="text-[10px] font-mono text-gray-500 uppercase">2026-05-02 14:22:01</span>
+                    </div>
+                    <p class="text-[11px] text-gray-400 font-mono mb-2">SOURCE_IP: 192.168.1.104 // TARGET: /auth/login // ATTEMPTS: 15/m</p>
+                    <div class="flex gap-2">
+                        <span class="px-2 py-0.5 bg-alert text-white text-[9px] font-bold uppercase tracking-widest">Blocked</span>
+                        <span class="px-2 py-0.5 bg-base-800 text-gray-400 border border-base-600 text-[9px] font-bold uppercase tracking-widest">IP Nullified</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-4 p-4 hover:bg-base-800 transition-colors border border-base-600">
+                <div class="text-accent pt-1">
+                    <i class="fas fa-search-plus"></i>
+                </div>
+                <div class="flex-1">
+                    <div class="flex justify-between mb-1">
+                        <span class="text-[10px] font-bold text-white uppercase tracking-widest">Routine Integrity Scan Completed</span>
+                        <span class="text-[10px] font-mono text-gray-500 uppercase">2026-05-02 12:00:00</span>
+                    </div>
+                    <p class="text-[11px] text-gray-400 font-mono">FILESYSTEM: /var/www/phantra // STATUS: CLEAN // NO MALWARE SIGNATURES DETECTED</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

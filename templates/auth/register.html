@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en" class="dark bg-[#050505] text-[#e0e0e0]">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - PHANTRA</title>
+    <!-- Google Fonts: Space Grotesk for headings, JetBrains Mono for data/UI -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['JetBrains Mono', 'monospace'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        base: {
+                            900: '#050505',
+                            800: '#111111',
+                            700: '#1a1a1a',
+                            600: '#333333',
+                        },
+                        accent: {
+                            DEFAULT: '#00ff41',
+                            muted: 'rgba(0, 255, 65, 0.15)',
+                        },
+                        alert: {
+                            DEFAULT: '#ff003c',
+                            muted: 'rgba(255, 0, 60, 0.15)'
+                        }
+                    },
+                    backgroundImage: {
+                        'grid-pattern': "linear-gradient(to right, #1a1a1a 1px, transparent 1px), linear-gradient(to bottom, #1a1a1a 1px, transparent 1px)"
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for standard icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background-size: 50px 50px;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-position: center center;
+        }
+
+        /* Utilitarian Button */
+        .btn-utilitarian {
+            position: relative;
+            background: transparent;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-utilitarian::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 4px; height: 100%;
+            background-color: transparent;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn-utilitarian:hover, .btn-utilitarian:focus-visible {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-color: #e0e0e0;
+            color: #fff;
+            outline: none;
+        }
+
+        .btn-accent {
+            color: #00ff41;
+            border-color: #00ff41;
+        }
+
+        .btn-accent::before {
+            background-color: #00ff41;
+        }
+        
+        .btn-accent:hover, .btn-accent:focus-visible {
+            background-color: rgba(0, 255, 65, 0.1);
+            border-color: #00ff41;
+            color: #00ff41;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+        }
+
+        /* Input styling */
+        .input-field {
+            background-color: #050505;
+            border: 1px solid #333;
+            color: #e0e0e0;
+            transition: all 0.2s ease;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #00ff41;
+            box-shadow: 0 0 0 1px #00ff41 inset;
+        }
+        .input-field::placeholder {
+            color: #666;
+        }
+
+        /* Role Options */
+        .role-option input:checked + label {
+            border-color: #00ff41;
+            background-color: rgba(0, 255, 65, 0.1);
+            color: #00ff41;
+            box-shadow: inset 0 0 0 1px #00ff41;
+        }
+        
+        .role-option input:focus-visible + label {
+            outline: 2px solid #00ff41;
+            outline-offset: 2px;
+        }
+        
+        /* Loading spinner */
+        .loading-spinner {
+            border: 2px solid #333;
+            border-top: 2px solid #00ff41;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4 selection:bg-accent selection:text-base-900 my-8">
+    
+    <main class="w-full max-w-md relative">
+        <!-- Structural corner accents -->
+        <div class="absolute -top-4 -left-4 w-8 h-8 border-t-2 border-l-2 border-base-600" aria-hidden="true"></div>
+        <div class="absolute -top-4 -right-4 w-8 h-8 border-t-2 border-r-2 border-base-600" aria-hidden="true"></div>
+        <div class="absolute -bottom-4 -left-4 w-8 h-8 border-b-2 border-l-2 border-base-600" aria-hidden="true"></div>
+        <div class="absolute -bottom-4 -right-4 w-8 h-8 border-b-2 border-r-2 border-base-600" aria-hidden="true"></div>
+
+        <article class="bg-base-900 border border-base-600 p-8 relative z-10 shadow-2xl">
+            <!-- Decorative Terminal Header -->
+            <header class="absolute top-0 left-0 w-full flex justify-between px-4 py-2 border-b border-base-600 text-[10px] text-gray-500 tracking-widest uppercase bg-base-800">
+                <span>ENROLLMENT_PROTOCOL</span>
+                <span>SEC_LEVEL: ALPHA</span>
+            </header>
+
+            <div class="mt-8 mb-6 text-center">
+                <i class="fas fa-user-shield text-4xl text-accent mb-4" aria-hidden="true"></i>
+                <h1 class="font-display text-2xl font-bold tracking-tight text-white mb-1 uppercase">Create Account</h1>
+                <p class="text-xs tracking-[0.1em] text-gray-500 uppercase">Register for the command center</p>
+            </div>
+            
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="mb-6 space-y-2">
+                        {% for category, message in messages %}
+                            <div class="p-3 text-sm border border-l-4 font-sans
+                                {% if category == 'success' %}bg-accent-muted text-accent border-accent
+                                {% else %}bg-alert-muted text-alert border-alert{% endif %}" role="alert">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            
+            <form method="POST" action="{{ url_for('auth.register') }}" id="registerForm" class="space-y-5">
+                {{ form.hidden_tag() }}
+                
+                <div class="space-y-1">
+                    <label for="email" class="block text-xs uppercase tracking-wider text-gray-400">Email Address</label>
+                    <div class="relative">
+                        <div class="absolute left-0 top-0 h-full w-10 flex items-center justify-center text-gray-500 border-r border-base-600 pointer-events-none">
+                            <i class="fas fa-envelope text-xs"></i>
+                        </div>
+                        {{ form.email(class="input-field w-full py-2.5 pl-12 pr-4 text-sm", placeholder="agent@phantra.sys", id="email", required=true, aria_invalid="true" if form.email.errors else "false") }}
+                    </div>
+                    {% for error in form.email.errors %}
+                        <p class="text-xs text-alert mt-1" role="alert"><i class="fas fa-exclamation-triangle mr-1"></i>{{ error }}</p>
+                    {% endfor %}
+                </div>
+                
+                <div class="space-y-1">
+                    <label for="username" class="block text-xs uppercase tracking-wider text-gray-400">Username</label>
+                    <div class="relative">
+                        <div class="absolute left-0 top-0 h-full w-10 flex items-center justify-center text-gray-500 border-r border-base-600 pointer-events-none">
+                            <i class="fas fa-user text-xs"></i>
+                        </div>
+                        {{ form.username(class="input-field w-full py-2.5 pl-12 pr-4 text-sm", placeholder="operative_name", id="username", required=true, aria_invalid="true" if form.username.errors else "false") }}
+                    </div>
+                    {% for error in form.username.errors %}
+                        <p class="text-xs text-alert mt-1" role="alert"><i class="fas fa-exclamation-triangle mr-1"></i>{{ error }}</p>
+                    {% endfor %}
+                </div>
+                
+                <div class="space-y-1">
+                    <label for="password" class="block text-xs uppercase tracking-wider text-gray-400">Security Key</label>
+                    <div class="relative">
+                        <div class="absolute left-0 top-0 h-full w-10 flex items-center justify-center text-gray-500 border-r border-base-600 pointer-events-none">
+                            <i class="fas fa-lock text-xs"></i>
+                        </div>
+                        {{ form.password(class="input-field w-full py-2.5 pl-12 pr-4 text-sm", placeholder="••••••••", id="password", required=true, aria_invalid="true" if form.password.errors else "false") }}
+                    </div>
+                    {% for error in form.password.errors %}
+                        <p class="text-xs text-alert mt-1" role="alert"><i class="fas fa-exclamation-triangle mr-1"></i>{{ error }}</p>
+                    {% endfor %}
+                </div>
+                
+                <div class="space-y-1">
+                    <label for="confirm_password" class="block text-xs uppercase tracking-wider text-gray-400">Verify Security Key</label>
+                    <div class="relative">
+                        <div class="absolute left-0 top-0 h-full w-10 flex items-center justify-center text-gray-500 border-r border-base-600 pointer-events-none">
+                            <i class="fas fa-lock text-xs"></i>
+                        </div>
+                        {{ form.confirm_password(class="input-field w-full py-2.5 pl-12 pr-4 text-sm", placeholder="••••••••", id="confirm_password", required=true, aria_invalid="true" if form.confirm_password.errors else "false") }}
+                    </div>
+                    {% for error in form.confirm_password.errors %}
+                        <p class="text-xs text-alert mt-1" role="alert"><i class="fas fa-exclamation-triangle mr-1"></i>{{ error }}</p>
+                    {% endfor %}
+                </div>
+                
+                <fieldset class="space-y-2 pt-2">
+                    <legend class="block text-xs uppercase tracking-wider text-gray-400 mb-2">Access Clearance Level</legend>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="role-option">
+                            <input type="radio" id="user" name="role" value="User" checked class="sr-only">
+                            <label for="user" class="block p-3 border border-base-600 bg-base-900 text-center cursor-pointer hover:border-gray-400 transition-all">
+                                <i class="fas fa-home text-lg text-gray-500 mb-1"></i>
+                                <span class="block text-xs font-bold uppercase tracking-wider text-gray-300">User</span>
+                            </label>
+                        </div>
+                        <div class="role-option">
+                            <input type="radio" id="admin" name="role" value="Admin" class="sr-only">
+                            <label for="admin" class="block p-3 border border-base-600 bg-base-900 text-center cursor-pointer hover:border-gray-400 transition-all">
+                                <i class="fas fa-user-shield text-lg text-gray-500 mb-1"></i>
+                                <span class="block text-xs font-bold uppercase tracking-wider text-gray-300">Admin</span>
+                            </label>
+                        </div>
+                    </div>
+                </fieldset>
+                
+                <div class="pt-4 border-t border-base-600 border-dashed">
+                    <button type="submit" class="btn-utilitarian btn-accent w-full py-3 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-3" id="registerBtn">
+                        <span id="btnText">EXECUTE_REGISTRATION</span>
+                        <i id="btnIcon" class="fas fa-user-plus" aria-hidden="true"></i>
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mt-6">
+                    <a href="{{ url_for('auth.login') }}" class="btn-utilitarian py-2 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2">
+                        <span>LOGIN</span>
+                    </a>
+                    <a href="{{ url_for('auth.index') }}" class="btn-utilitarian py-2 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2">
+                        <span>ABORT</span>
+                    </a>
+                </div>
+            </form>
+        </article>
+    </main>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            const btn = document.getElementById('registerBtn');
+            const btnText = document.getElementById('btnText');
+            const btnIcon = document.getElementById('btnIcon');
+            
+            btn.disabled = true;
+            btn.classList.add('opacity-80', 'cursor-not-allowed');
+            btnText.innerText = 'PROCESSING...';
+            btnIcon.className = 'fas fa-spinner fa-spin';
+        });
+    </script>
+</body>
+</html>

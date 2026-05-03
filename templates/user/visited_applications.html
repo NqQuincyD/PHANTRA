@@ -1,0 +1,427 @@
+{% extends 'user/base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-desktop text-blue-500 text-2xl"></i>
+            <div>
+                <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">Files & Applications Monitoring</h1>
+                <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">Real-time Process Telemetry & Resource Audit</p>
+            </div>
+        </div>
+        <form method="POST">
+             <button type="submit" class="px-4 py-2 bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[10px] font-bold uppercase tracking-widest hover:bg-blue-500/20 transition-all flex items-center gap-2">
+                 <i class="fas fa-sync-alt"></i> Scan System Now
+             </button>
+        </form>
+    </div>
+
+    <!-- Admin User Selector -->
+    {% if current_user.role == 'Admin' and all_users %}
+    <div class="content-card border-blue-500/20 bg-blue-500/5">
+        <div class="flex flex-wrap items-center gap-6">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-user-shield text-blue-500"></i>
+                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Monitor Target</label>
+            </div>
+            <select onchange="window.location.href='{{ url_for('user.visited_applications') }}?username=' + this.value" class="bg-base-900 border border-base-600 text-xs text-gray-300 px-3 py-1.5 focus:border-blue-500 outline-none transition-colors min-w-[200px]">
+                <option value="">-- Select User --</option>
+                {% for u in all_users %}
+                <option value="{{ u.username }}" {% if u.username == username %}selected{% endif %}>{{ u.username }} ({{ u.email }})</option>
+                {% endfor %}
+            </select>
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Active Target:</span>
+                <span class="text-xs font-mono text-white bg-base-900 px-2 py-0.5 border border-base-600">{{ username }}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Global Controls -->
+    <div class="flex flex-wrap items-center justify-between gap-4 p-4 bg-base-900/50 border border-base-700/50">
+        <div class="flex items-center gap-4">
+            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Auto-Refresh</span>
+            <div class="flex gap-1">
+                <button id="refresh-off" class="refresh-badge px-2 py-1 bg-base-900 border border-base-600 text-[9px] font-bold text-gray-500 hover:text-white transition-colors">OFF</button>
+                <button id="refresh-30s" class="refresh-badge active px-2 py-1 bg-blue-500/20 border border-blue-500/40 text-[9px] font-bold text-blue-400">30S</button>
+                <button id="refresh-1m" class="refresh-badge px-2 py-1 bg-base-900 border border-base-600 text-[9px] font-bold text-gray-500 hover:text-white transition-colors">1M</button>
+                <button id="refresh-5m" class="refresh-badge px-2 py-1 bg-base-900 border border-base-600 text-[9px] font-bold text-gray-500 hover:text-white transition-colors">5M</button>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <div class="relative">
+                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 text-[10px]"></i>
+                <input type="text" id="filter-input" class="bg-base-900 border border-base-600 text-xs text-gray-300 pl-8 pr-3 py-1.5 focus:border-blue-500 outline-none transition-colors w-64" placeholder="FILTER TELEMETRY...">
+            </div>
+            <button id="clear-filter" class="px-3 py-1.5 bg-base-900 border border-base-600 text-[10px] font-bold text-gray-500 hover:text-white transition-colors uppercase tracking-widest">Clear</button>
+        </div>
+    </div>
+
+    <!-- Quick Navigation -->
+    <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-base-600">
+        <button class="section-filter-btn active whitespace-nowrap px-4 py-1.5 bg-blue-500/20 border border-blue-500/40 text-[10px] font-bold text-blue-400 uppercase tracking-widest" data-section="all">ALL TELEMETRY</button>
+        <button class="section-filter-btn whitespace-nowrap px-4 py-1.5 bg-base-900 border border-base-600 text-[10px] font-bold text-gray-500 hover:text-white transition-colors uppercase tracking-widest" data-section="active-apps">ACTIVE APPS</button>
+        <button class="section-filter-btn whitespace-nowrap px-4 py-1.5 bg-base-900 border border-base-600 text-[10px] font-bold text-gray-500 hover:text-white transition-colors uppercase tracking-widest" data-section="active-browsers">BROWSERS</button>
+        <button class="section-filter-btn whitespace-nowrap px-4 py-1.5 bg-base-900 border border-base-600 text-[10px] font-bold text-gray-500 hover:text-white transition-colors uppercase tracking-widest" data-section="recent-activity">RECENT LOGS</button>
+        <button class="section-filter-btn whitespace-nowrap px-4 py-1.5 bg-base-900 border border-base-600 text-[10px] font-bold text-gray-500 hover:text-white transition-colors uppercase tracking-widest" data-section="popular-files">FILE STATS</button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 section-container" id="active-status-grid">
+        <!-- Active Applications -->
+        <div class="content-card space-y-4" id="active-apps-section">
+            <div class="flex items-center justify-between border-b border-base-600 pb-3">
+                <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                    <i class="fas fa-desktop text-blue-500"></i> Active Applications
+                </h3>
+                <span class="text-[9px] font-mono text-blue-400 bg-blue-500/10 px-2 py-0.5 border border-blue-500/20" id="active-apps-count">{{ active_apps|length }} NODES</span>
+            </div>
+            <div class="dataframe-container">
+                <table id="active-apps-table">
+                    <thead>
+                        <tr>
+                            <th>APPLICATION</th>
+                            <th>PROCESSES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for app, count in active_apps.items() %}
+                        <tr>
+                            <td>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                    <i class="fas fa-window-restore text-gray-600"></i> 
+                                    <span class="text-white">{{ app }}</span>
+                                </div>
+                            </td>
+                            <td class="font-mono text-blue-400">{{ count }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="2" class="text-center text-gray-600 py-8">NO ACTIVE PROCESSES DETECTED</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Active Browsers -->
+        <div class="content-card space-y-4" id="active-browsers-section">
+            <div class="flex items-center justify-between border-b border-base-600 pb-3">
+                <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                    <i class="fas fa-globe text-blue-500"></i> Active Browsers
+                </h3>
+                <span class="text-[9px] font-mono text-blue-400 bg-blue-500/10 px-2 py-0.5 border border-blue-500/20" id="active-browsers-count">{{ active_browsers|length }} NODES</span>
+            </div>
+            <div class="dataframe-container">
+                <table id="active-browsers-table">
+                    <thead>
+                        <tr>
+                            <th>BROWSER</th>
+                            <th>PROCESSES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for browser, count in active_browsers.items() %}
+                        <tr>
+                            <td>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                    <i class="fab fa-{{ browser }} text-gray-600"></i> 
+                                    <span class="text-white">{{ browser|capitalize }}</span>
+                                </div>
+                            </td>
+                            <td class="font-mono text-blue-400">{{ count }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="2" class="text-center text-gray-600 py-8">NO BROWSER INSTANCES DETECTED</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="content-card space-y-4 section-container" id="recent-activity-section">
+        <div class="flex items-center justify-between border-b border-base-600 pb-3">
+            <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <i class="fas fa-clock text-blue-500"></i> Recent File Activity Logs
+            </h3>
+            <span class="text-[9px] font-bold text-green-500 bg-green-500/10 px-2 py-0.5 border border-green-500/20 uppercase tracking-widest">Session Audit Enabled</span>
+        </div>
+        <div class="dataframe-container overflow-x-auto">
+            <table id="recent-activity-table">
+                <thead>
+                    <tr>
+                        <th>TIMESTAMP</th>
+                        <th>FILE NAME</th>
+                        <th>ABSOLUTE PATH</th>
+                        <th>APPLICATION</th>
+                        <th class="text-right">ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for visit in recent_visits %}
+                    <tr>
+                        <td class="whitespace-nowrap font-mono text-[10px] text-gray-500">{{ visit[1].strftime('%H:%M:%S | %d %b') }}</td>
+                        <td class="max-w-[150px] truncate">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-file-alt text-gray-600"></i>
+                                <span class="text-white">{{ visit[0]|basename }}</span>
+                            </div>
+                        </td>
+                        <td class="max-w-[250px] truncate font-mono text-[10px] text-gray-500">{{ visit[0] }}</td>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-window-maximize text-gray-600"></i>
+                                <span class="text-gray-400">{{ visit[2] if visit[2] else 'SYSTEM' }}</span>
+                            </div>
+                        </td>
+                        <td class="text-right">
+                            <button class="p-1 hover:text-blue-400 transition-colors" title="INSPECT TELEMETRY">
+                                <i class="fas fa-search text-xs"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 section-container" id="stats-section">
+        <!-- Most Visited -->
+        <div class="content-card space-y-4" id="popular-files-section">
+            <div class="flex items-center justify-between border-b border-base-600 pb-3">
+                <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                    <i class="fas fa-chart-line text-blue-500"></i> High-Frequency Files
+                </h3>
+            </div>
+            <div class="dataframe-container">
+                <table id="popular-files-table">
+                    <thead>
+                        <tr>
+                            <th>FILE</th>
+                            <th>PATH</th>
+                            <th class="text-right">HITS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for file in popular_files %}
+                        <tr>
+                            <td class="max-w-[120px] truncate text-white">{{ file[0]|basename }}</td>
+                            <td class="max-w-[150px] truncate font-mono text-[10px] text-gray-600">{{ file[0] }}</td>
+                            <td class="text-right font-mono text-blue-400">{{ file[1] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- App Usage -->
+        <div class="content-card space-y-4" id="app-usage-section">
+            <div class="flex items-center justify-between border-b border-base-600 pb-3">
+                <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                    <i class="fas fa-chart-pie text-blue-500"></i> Application Heatmap
+                </h3>
+                <span class="text-[9px] font-bold text-gray-600 uppercase tracking-widest">TOP 10 NODES</span>
+            </div>
+            <div class="dataframe-container">
+                <table id="app-usage-table">
+                    <thead>
+                        <tr>
+                            <th>APPLICATION</th>
+                            <th class="text-right">FILES ACCESSED</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for app in app_usage %}
+                        <tr>
+                            <td>
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-window-restore text-gray-600"></i>
+                                    <span class="text-white">{{ app[0] }}</span>
+                                </div>
+                            </td>
+                            <td class="text-right font-mono text-blue-400">{{ app[1] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Section -->
+    <div class="content-card border-dashed border-base-600 bg-transparent">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+                <h3 class="text-[10px] font-bold text-white uppercase tracking-widest flex items-center gap-2 mb-1">
+                    <i class="fas fa-download text-blue-500"></i> Export Telemetry Data
+                </h3>
+                <p class="text-[11px] text-gray-500 uppercase tracking-wider">Generate static snapshots of current monitoring buffers.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="location.href='/export-data'" class="px-4 py-2 bg-base-900 border border-base-600 text-[10px] font-bold text-gray-400 hover:text-white hover:border-blue-500 transition-all uppercase tracking-widest flex items-center gap-2">
+                    <i class="fas fa-file-excel text-green-500"></i> EXCEL
+                </button>
+                <button onclick="exportAsJSON()" class="px-4 py-2 bg-base-900 border border-base-600 text-[10px] font-bold text-gray-400 hover:text-white hover:border-blue-500 transition-all uppercase tracking-widest flex items-center gap-2">
+                    <i class="fas fa-file-code text-orange-500"></i> JSON
+                </button>
+                <button onclick="exportAsCSV()" class="px-4 py-2 bg-base-900 border border-base-600 text-[10px] font-bold text-gray-400 hover:text-white hover:border-blue-500 transition-all uppercase tracking-widest flex items-center gap-2">
+                    <i class="fas fa-file-csv text-blue-500"></i> CSV
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Telemetry Refresh Management
+    let refreshInterval = 30000;
+    let refreshTimer = null;
+    
+    document.querySelectorAll('.refresh-badge').forEach(badge => {
+        badge.addEventListener('click', function() {
+            document.querySelectorAll('.refresh-badge').forEach(b => {
+                b.classList.remove('active', 'bg-blue-500/20', 'border-blue-500/40', 'text-blue-400');
+                b.classList.add('bg-base-900', 'border-base-600', 'text-gray-500');
+            });
+            
+            this.classList.remove('bg-base-900', 'border-base-600', 'text-gray-500');
+            this.classList.add('active', 'bg-blue-500/20', 'border-blue-500/40', 'text-blue-400');
+            
+            if (refreshTimer) clearTimeout(refreshTimer);
+            
+            const id = this.id;
+            if (id === 'refresh-30s') refreshInterval = 30000;
+            else if (id === 'refresh-1m') refreshInterval = 60000;
+            else if (id === 'refresh-5m') refreshInterval = 300000;
+            else refreshInterval = 0;
+            
+            if (refreshInterval > 0) startRefreshTimer();
+        });
+    });
+    
+    function startRefreshTimer() {
+        if (refreshInterval > 0) {
+            refreshTimer = setTimeout(() => window.location.reload(), refreshInterval);
+        }
+    }
+    
+    startRefreshTimer();
+    
+    // Viewport Filtering
+    document.querySelectorAll('.section-filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.section-filter-btn').forEach(b => {
+                b.classList.remove('active', 'bg-blue-500/20', 'border-blue-500/40', 'text-blue-400');
+                b.classList.add('bg-base-900', 'border-base-600', 'text-gray-500');
+            });
+            
+            this.classList.remove('bg-base-900', 'border-base-600', 'text-gray-500');
+            this.classList.add('active', 'bg-blue-500/20', 'border-blue-500/40', 'text-blue-400');
+            
+            const target = this.dataset.section;
+            const sections = ['active-apps-section', 'active-browsers-section', 'recent-activity-section', 'popular-files-section', 'app-usage-section', 'active-status-grid', 'stats-section'];
+            
+            if (target === 'all') {
+                sections.forEach(s => {
+                    const el = document.getElementById(s);
+                    if (el) el.classList.remove('hidden');
+                });
+            } else {
+                sections.forEach(s => {
+                    const el = document.getElementById(s);
+                    if (el) el.classList.add('hidden');
+                });
+                
+                const activeSec = document.getElementById(target + '-section');
+                if (activeSec) {
+                    activeSec.classList.remove('hidden');
+                    // Show parent grid/container if necessary
+                    if (target === 'active-apps' || target === 'active-browsers') document.getElementById('active-status-grid').classList.remove('hidden');
+                    if (target === 'popular-files' || target === 'app-usage') document.getElementById('stats-section').classList.remove('hidden');
+                }
+            }
+        });
+    });
+    
+    // Real-time Data Filter
+    const filterInput = document.getElementById('filter-input');
+    const clearBtn = document.getElementById('clear-filter');
+    
+    filterInput.addEventListener('input', function() {
+        const val = this.value.toLowerCase();
+        const tables = ['active-apps-table', 'active-browsers-table', 'recent-activity-table', 'popular-files-table', 'app-usage-table'];
+        
+        tables.forEach(tableId => {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            
+            const rows = table.querySelectorAll('tbody tr');
+            let hasMatch = false;
+            
+            rows.forEach(row => {
+                if (row.classList.contains('no-results')) return;
+                const text = row.textContent.toLowerCase();
+                const match = val === '' || text.includes(val);
+                row.classList.toggle('hidden', !match);
+                if (match) hasMatch = true;
+            });
+            
+            let noResRow = table.querySelector('.no-results');
+            if (!hasMatch && val !== '') {
+                if (!noResRow) {
+                    const tr = document.createElement('tr');
+                    tr.className = 'no-results';
+                    tr.innerHTML = `<td colspan="100" class="text-center text-gray-600 py-8 uppercase tracking-widest text-[10px]">No telemetry matches found</td>`;
+                    table.querySelector('tbody').appendChild(tr);
+                }
+            } else if (noResRow) {
+                noResRow.remove();
+            }
+        });
+    });
+    
+    clearBtn.addEventListener('click', () => {
+        filterInput.value = '';
+        filterInput.dispatchEvent(new Event('input'));
+    });
+    
+    // Export Data Serializers
+    function exportAsJSON() {
+        const data = {
+            timestamp: new Date().toISOString(),
+            active_apps: {{ active_apps|tojson }},
+            active_browsers: {{ active_browsers|tojson }},
+            recent_activity: {{ recent_visits|tojson }},
+            popular_files: {{ popular_files|tojson }},
+            app_usage: {{ app_usage|tojson }}
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `PHANTRA_TELEMETRY_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+    }
+    
+    function exportAsCSV() {
+        let csv = "TYPE,NAME,COUNT,PATH,TIMESTAMP,APPLICATION\n";
+        
+        Object.entries({{ active_apps|tojson }}).forEach(([n, c]) => csv += `APP,"${n}",${c},,,\n`);
+        Object.entries({{ active_browsers|tojson }}).forEach(([n, c]) => csv += `BROWSER,"${n}",${c},,,\n`);
+        {{ recent_visits|tojson }}.forEach(v => csv += `VISIT,"${v[0].split(/[\\/]/).pop()}",1,"${v[0]}","${v[1]}","${v[2]||''}"\n`);
+        
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `PHANTRA_TELEMETRY_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+    }
+</script>
+{% endblock %}

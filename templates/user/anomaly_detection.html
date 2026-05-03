@@ -1,0 +1,195 @@
+{% extends 'user/base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between gap-3 mb-8">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-shield-alt text-blue-500 text-2xl"></i>
+            <div>
+                <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">Anomaly Detection</h1>
+                <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">Isolation Forest Machine Learning Analysis</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-right hidden sm:block">
+                <p id="countdown-timer" class="text-[10px] text-gray-500 uppercase tracking-widest font-mono">Cycle: STANDBY</p>
+            </div>
+            <div class="flex items-center bg-base-900 border border-base-600 p-1">
+                <button class="refresh-badge px-2 py-1 text-[9px] font-bold uppercase tracking-tighter text-gray-500 hover:text-white transition-colors" data-interval="30000">30S</button>
+                <button class="refresh-badge px-2 py-1 text-[9px] font-bold uppercase tracking-tighter text-gray-500 hover:text-white transition-colors" data-interval="60000">1M</button>
+                <button class="refresh-badge px-2 py-1 text-[9px] font-bold uppercase tracking-tighter text-gray-500 hover:text-white transition-colors" data-interval="300000">5M</button>
+                <button class="refresh-badge active px-2 py-1 text-[9px] font-bold uppercase tracking-tighter text-blue-500 bg-base-800" data-interval="0">OFF</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Behavior Matrix -->
+    <div class="content-card relative overflow-hidden border-l-4" style="border-color: {{ behavior_analysis.color }};">
+        <div class="absolute top-0 right-0 p-8 opacity-5">
+            <i class="fas {{ behavior_analysis.icon }} text-9xl"></i>
+        </div>
+        <div class="relative z-10 space-y-4">
+            <div class="flex items-center gap-2">
+                <i class="fas {{ behavior_analysis.icon }} text-lg" style="color: {{ behavior_analysis.color }};"></i>
+                <h2 class="text-sm font-bold uppercase tracking-widest" style="color: {{ behavior_analysis.color }};">
+                    Analysis Core Status: {{ behavior_analysis.status }}
+                </h2>
+            </div>
+            <p class="text-gray-300 text-sm leading-relaxed max-w-2xl">{{ behavior_analysis.message }}</p>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-4 border-t border-base-600/50">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Samples</label>
+                    <p class="text-xl font-display font-bold text-white">{{ behavior_analysis.total_records }}</p>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Anomalous Points</label>
+                    <p class="text-xl font-display font-bold text-alert">{{ behavior_analysis.total_anomalies }}</p>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Confidence</label>
+                    <p class="text-xl font-display font-bold text-accent">98.4%</p>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Model Version</label>
+                    <p class="text-xl font-display font-bold text-gray-300">IF-v2.1</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Navigation -->
+    <div class="flex flex-wrap gap-2">
+        <button onclick="showSection('high-risk')" id="btn-high-risk" class="nav-btn active px-4 py-2 border border-base-600 bg-base-900 text-gray-400 font-bold uppercase tracking-widest text-[10px] hover:border-alert hover:text-alert transition-all">
+            Unusual Threats
+        </button>
+        <button onclick="showSection('threat-detection')" id="btn-threat-detection" class="nav-btn px-4 py-2 border border-base-600 bg-base-900 text-gray-400 font-bold uppercase tracking-widest text-[10px] hover:border-accent hover:text-accent transition-all">
+            Threat Grouping
+        </button>
+    </div>
+
+    <!-- Data Grids -->
+    <div class="space-y-6">
+        <div id="high-risk" class="section-container content-card !p-0 overflow-hidden hidden">
+            <div class="p-4 border-b border-base-600 bg-base-900/50 flex items-center justify-between">
+                <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Telemetry: High-Risk Vectors</h3>
+                <span class="text-[9px] font-mono text-alert uppercase tracking-tighter animate-pulse">Live Stream Active</span>
+            </div>
+            <div class="overflow-x-auto dataframe-container">
+                {{ high_risk|safe }}
+            </div>
+        </div>
+
+        <div id="threat-detection" class="section-container content-card !p-0 overflow-hidden hidden">
+            <div class="p-4 border-b border-base-600 bg-base-900/50 flex items-center justify-between">
+                <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Clustered Threat Intelligence</h3>
+                <span class="text-[9px] font-mono text-accent uppercase tracking-tighter">Heuristic Mapping Completed</span>
+            </div>
+            <div class="overflow-x-auto dataframe-container">
+                {{ threat_detection|safe }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Styling for injected Pandas DataFrames */
+    .dataframe-container table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 11px !important;
+    }
+    .dataframe-container th {
+        background: #0a0a0a !important;
+        color: #666 !important;
+        text-align: left !important;
+        padding: 12px 16px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        border-bottom: 1px solid #222 !important;
+    }
+    .dataframe-container td {
+        padding: 10px 16px !important;
+        color: #ccc !important;
+        border-bottom: 1px solid #111 !important;
+    }
+    .dataframe-container tr:hover td {
+        background: rgba(255,255,255,0.02) !important;
+        color: #fff !important;
+    }
+    
+    .nav-btn.active {
+        background: #111;
+        border-color: #3b82f6 !important;
+        color: #fff !important;
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.1);
+    }
+</style>
+
+<script>
+    let refreshInterval = 0;
+    let countdownTimer = null;
+    let countdownValue = 0;
+
+    function startRefreshTimer() {
+        if (refreshInterval > 0) {
+            countdownValue = refreshInterval / 1000;
+            updateCountdownDisplay();
+            countdownTimer = setInterval(() => {
+                countdownValue--;
+                updateCountdownDisplay();
+                if (countdownValue <= 0) {
+                    clearInterval(countdownTimer);
+                    window.location.reload();
+                }
+            }, 1000);
+        } else {
+            document.getElementById('countdown-timer').innerText = "CYCLE: STANDBY";
+        }
+    }
+
+    function updateCountdownDisplay() {
+        if (refreshInterval > 0) {
+            document.getElementById('countdown-timer').innerText = `NEXT SYNC: ${countdownValue}S`;
+        }
+    }
+
+    document.querySelectorAll('.refresh-badge').forEach(badge => {
+        badge.addEventListener('click', function() {
+            document.querySelectorAll('.refresh-badge').forEach(b => {
+                b.classList.remove('active', 'text-blue-500', 'bg-base-800');
+                b.classList.add('text-gray-500');
+            });
+            
+            this.classList.add('active', 'text-blue-500', 'bg-base-800');
+            this.classList.remove('text-gray-500');
+
+            if (countdownTimer) clearInterval(countdownTimer);
+            refreshInterval = parseInt(this.getAttribute('data-interval'));
+            startRefreshTimer();
+            localStorage.setItem('anomalyRefreshInterval', refreshInterval);
+        });
+    });
+
+    function showSection(sectionId) {
+        document.querySelectorAll('.section-container').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        
+        document.getElementById(sectionId).classList.remove('hidden');
+        document.getElementById('btn-' + sectionId).classList.add('active');
+        localStorage.setItem('activeAnomalySection', sectionId);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedSection = localStorage.getItem('activeAnomalySection') || 'high-risk';
+        showSection(savedSection);
+
+        const savedInterval = localStorage.getItem('anomalyRefreshInterval');
+        if (savedInterval !== null) {
+            refreshInterval = parseInt(savedInterval);
+            const activeBadge = document.querySelector(`.refresh-badge[data-interval="${refreshInterval}"]`);
+            if (activeBadge) activeBadge.click();
+        }
+    });
+</script>
+{% endblock %}

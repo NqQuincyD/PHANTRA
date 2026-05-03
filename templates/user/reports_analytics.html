@@ -1,0 +1,180 @@
+{% extends 'user/base.html' %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center gap-3 mb-8">
+        <i class="fas fa-chart-line text-blue-500 text-2xl"></i>
+        <div>
+            <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">Risk Analytics</h1>
+            <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">Statistical Telemetry & Distribution Audit</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Risk Distribution Chart -->
+        <div class="content-card space-y-4">
+            <div class="flex items-center justify-between border-b border-base-600 pb-4">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Anomaly Flux Distribution</h3>
+                <div class="flex gap-2">
+                    <button class="px-2 py-1 bg-base-900 border border-base-600 text-[9px] font-bold text-gray-500 hover:text-white transition-colors" onclick="toggleChartType('riskDistributionChart')">TOGGLE TYPE</button>
+                    <button class="px-2 py-1 bg-base-900 border border-base-600 text-[9px] font-bold text-gray-500 hover:text-white transition-colors" onclick="downloadChart('riskDistributionChart', 'Risk_Distribution.png')">EXPORT</button>
+                </div>
+            </div>
+            <div class="h-[400px] relative">
+                <canvas id="riskDistributionChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Average Risk by Category Chart -->
+        <div class="content-card space-y-4">
+            <div class="flex items-center justify-between border-b border-base-600 pb-4">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest">Category Threat Severity</h3>
+                <div class="flex gap-2">
+                    <button class="px-2 py-1 bg-base-900 border border-base-600 text-[9px] font-bold text-gray-500 hover:text-white transition-colors" onclick="toggleChartType('avgRiskByCategoryChart')">TOGGLE TYPE</button>
+                    <button class="px-2 py-1 bg-base-900 border border-base-600 text-[9px] font-bold text-gray-500 hover:text-white transition-colors" onclick="downloadChart('avgRiskByCategoryChart', 'Risk_by_Category.png')">EXPORT</button>
+                </div>
+            </div>
+            <div class="h-[400px] relative">
+                <canvas id="avgRiskByCategoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-card bg-base-900/30 border-dashed">
+        <div class="flex items-start gap-4">
+            <i class="fas fa-info-circle text-blue-500 mt-1"></i>
+            <div>
+                <h4 class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Analytical Context</h4>
+                <p class="text-xs text-gray-500 leading-relaxed uppercase tracking-wider">Charts represent aggregated telemetry from the last 72-hour observation window. Distribution metrics are normalized across all active node endpoints. Data updates are subject to ML processing latency (approx. 5-10ms).</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+<script>
+    Chart.register(ChartDataLabels);
+
+    const theme = {
+        grid: 'rgba(255, 255, 255, 0.05)',
+        text: '#666',
+        accent: '#00ff41',
+        alert: '#ff003c',
+        font: "'JetBrains Mono', monospace"
+    };
+
+    const riskColors = {
+        'Critical': '#ff003c',
+        'High': '#f97316',
+        'Medium': '#eab308',
+        'Low': '#00ff41',
+        'Informational': '#3b82f6'
+    };
+
+    const riskDistributionData = {{ risk_distribution|tojson }};
+    const riskLabels = Object.keys(riskDistributionData);
+    const riskValues = Object.values(riskDistributionData);
+    const riskBackgroundColors = riskLabels.map(label => riskColors[label] || '#444');
+
+    const avgRiskByCategoryData = {{ avg_risk_by_category|tojson }};
+    const categoryLabels = Object.keys(avgRiskByCategoryData);
+    const categoryValues = Object.values(avgRiskByCategoryData);
+
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            datalabels: {
+                color: '#fff',
+                font: { family: theme.font, size: 10, weight: 'bold' },
+                anchor: 'end',
+                align: 'top',
+                formatter: (v) => v > 0 ? (typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(2) : v) : ''
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { color: theme.grid },
+                ticks: { color: theme.text, font: { family: theme.font, size: 9 } }
+            },
+            x: {
+                grid: { display: false },
+                ticks: { color: theme.text, font: { family: theme.font, size: 9 } }
+            }
+        }
+    };
+
+    const riskDistributionChart = new Chart(document.getElementById('riskDistributionChart'), {
+        type: 'bar',
+        data: {
+            labels: riskLabels,
+            datasets: [{
+                data: riskValues,
+                backgroundColor: riskBackgroundColors.map(c => c + '33'),
+                borderColor: riskBackgroundColors,
+                borderWidth: 1
+            }]
+        },
+        options: commonOptions
+    });
+
+    const avgRiskByCategoryChart = new Chart(document.getElementById('avgRiskByCategoryChart'), {
+        type: 'bar',
+        data: {
+            labels: categoryLabels,
+            datasets: [{
+                data: categoryValues,
+                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                borderColor: '#3b82f6',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            plugins: {
+                ...commonOptions.plugins,
+                datalabels: {
+                    ...commonOptions.plugins.datalabels,
+                    formatter: (v) => v.toFixed(2)
+                }
+            }
+        }
+    });
+
+    function toggleChartType(chartId) {
+        const chart = chartId === 'riskDistributionChart' ? riskDistributionChart : avgRiskByCategoryChart;
+        const types = ['bar', 'pie', 'doughnut'];
+        const currentType = chart.config.type;
+        const nextType = types[(types.indexOf(currentType) + 1) % types.length];
+        
+        chart.config.type = nextType;
+        if (nextType !== 'bar') {
+            chart.options.scales.x.display = false;
+            chart.options.scales.y.display = false;
+            chart.options.plugins.legend.display = true;
+            chart.options.plugins.legend.labels = { color: '#666', font: { family: theme.font, size: 9 } };
+            chart.options.plugins.datalabels.align = 'center';
+            chart.options.plugins.datalabels.anchor = 'center';
+        } else {
+            chart.options.scales.x.display = true;
+            chart.options.scales.y.display = true;
+            chart.options.plugins.legend.display = false;
+            chart.options.plugins.datalabels.align = 'top';
+            chart.options.plugins.datalabels.anchor = 'end';
+        }
+        chart.update();
+    }
+
+    function downloadChart(chartId, filename) {
+        const chart = chartId === 'riskDistributionChart' ? riskDistributionChart : avgRiskByCategoryChart;
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = chart.toBase64Image('image/png', 1);
+        link.click();
+    }
+</script>
+{% endblock %}
