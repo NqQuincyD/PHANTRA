@@ -6,63 +6,63 @@
         <div class="flex items-center gap-3">
             <i class="fas fa-users text-alert text-2xl"></i>
             <div>
-                <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">User Management</h1>
+                <h1 class="font-display font-bold text-2xl text-gray-800 tracking-wider uppercase m-0">User Management</h1>
                 <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">Directory & Access Control</p>
             </div>
         </div>
-        <a href="{{ url_for('admin.add_user') }}" class="px-4 py-2 border border-accent text-accent hover:bg-accent hover:text-base-900 transition-colors text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+        <a href="{{ url_for('admin.add_user') }}" class="px-4 py-2 bg-accent text-white hover:bg-blue-600 transition-colors text-xs font-bold uppercase tracking-widest flex items-center gap-2 rounded shadow-sm border border-accent">
             <i class="fas fa-user-plus"></i> Add User
         </a>
     </div>
 
-    <div class="content-card !p-0 overflow-hidden">
+    <div class="content-card !p-0 overflow-hidden bg-white border border-gray-200 rounded">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="border-b border-base-600 bg-base-900/50">
-                        <th class="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">ID</th>
-                        <th class="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Username</th>
-                        <th class="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Email</th>
-                        <th class="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Role</th>
-                        <th class="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                    <tr class="border-b border-gray-200 bg-gray-50">
+                        <th class="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">ID</th>
+                        <th class="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Username</th>
+                        <th class="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Email</th>
+                        <th class="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Role</th>
+                        <th class="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-base-600 text-sm">
+                <tbody class="divide-y divide-gray-100 text-sm">
                     {% for user in users %}
-                    <tr class="hover:bg-base-800 transition-colors group">
+                    <tr class="hover:bg-blue-50/30 transition-colors group">
                         <td class="p-4 text-gray-500 font-mono text-xs">{{ user.id }}</td>
-                        <td class="p-4 font-bold text-white uppercase tracking-wider">{{ user.username }}</td>
-                        <td class="p-4 text-gray-400 font-mono text-xs">{{ user.email }}</td>
+                        <td class="p-4 font-bold text-gray-850 uppercase tracking-wider">{{ user.username }}</td>
+                        <td class="p-4 text-gray-550 font-mono text-xs">{{ user.email }}</td>
                         <td class="p-4">
                             {% if user.role == 'Suspended' %}
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-alert/10 text-alert border border-alert/30 text-[10px] font-bold uppercase tracking-wider">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-alert/10 text-alert border border-alert/30 text-[10px] font-bold uppercase tracking-wider rounded-sm">
                                     <i class="fas fa-ban"></i> Suspended
                                 </span>
                             {% elif user.role == 'Admin' %}
-                                <span class="text-alert font-bold uppercase tracking-widest text-[10px] border border-alert/20 px-2 py-0.5"><i class="fas fa-shield-alt mr-1"></i> {{ user.role }}</span>
+                                <span class="text-alert font-bold uppercase tracking-widest text-[10px] border border-alert/20 px-2 py-0.5 rounded-sm"><i class="fas fa-shield-alt mr-1"></i> {{ user.role }}</span>
                             {% else %}
-                                <span class="text-accent font-bold uppercase tracking-widest text-[10px] border border-accent/20 px-2 py-0.5">{{ user.role }}</span>
+                                <span class="text-accent font-bold uppercase tracking-widest text-[10px] border border-accent/20 px-2 py-0.5 rounded-sm">{{ user.role }}</span>
                             {% endif %}
                         </td>
                         <td class="p-4 text-right">
-                            <div class="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                <a href="{{ url_for('admin.view_user', user_id=user.id) }}" class="p-1.5 border border-base-600 text-gray-400 hover:border-white hover:text-white transition-colors" title="View Profile">
+                            <div class="flex items-center justify-end gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
+                                <a href="{{ url_for('admin.view_user', user_id=user.id) }}" class="p-1.5 border border-gray-250 text-gray-500 hover:border-accent hover:bg-accent-muted hover:text-accent transition-colors rounded-sm" title="View Profile">
                                     <i class="fas fa-eye text-xs"></i>
                                 </a>
-                                <a href="{{ url_for('admin.update_user', user_id=user.id) }}" class="p-1.5 border border-base-600 text-gray-400 hover:border-accent hover:text-accent transition-colors" title="Edit User">
+                                <a href="{{ url_for('admin.update_user', user_id=user.id) }}" class="p-1.5 border border-gray-250 text-gray-500 hover:border-accent hover:bg-accent-muted hover:text-accent transition-colors rounded-sm" title="Edit User">
                                     <i class="fas fa-edit text-xs"></i>
                                 </a>
                                 {% if current_user.id != user.id %}
                                     {% if user.role == 'Suspended' %}
-                                        <button onclick="toggleSuspend({{ user.id }})" class="p-1.5 border border-base-600 text-gray-400 hover:border-accent hover:text-accent transition-colors" title="Activate Account">
+                                        <button onclick="toggleSuspend({{ user.id }})" class="p-1.5 border border-gray-250 text-gray-500 hover:border-accent hover:bg-accent-muted hover:text-accent transition-colors rounded-sm" title="Activate Account">
                                             <i class="fas fa-unlock text-xs"></i>
                                         </button>
                                     {% else %}
-                                        <button onclick="toggleSuspend({{ user.id }})" class="p-1.5 border border-base-600 text-gray-400 hover:border-gray-300 hover:text-white transition-colors" title="Suspend Account">
+                                        <button onclick="toggleSuspend({{ user.id }})" class="p-1.5 border border-gray-250 text-gray-500 hover:border-alert hover:bg-alert/10 hover:text-alert transition-colors rounded-sm" title="Suspend Account">
                                             <i class="fas fa-ban text-xs"></i>
                                         </button>
                                     {% endif %}
-                                    <button onclick="deleteUser({{ user.id }}, '{{ user.username }}')" class="p-1.5 border border-base-600 text-gray-400 hover:border-alert hover:text-alert transition-colors" title="Purge Entity">
+                                    <button onclick="deleteUser({{ user.id }}, '{{ user.username }}')" class="p-1.5 border border-gray-250 text-gray-500 hover:border-alert hover:bg-alert/10 hover:text-alert transition-colors rounded-sm" title="Purge Entity">
                                         <i class="fas fa-trash-alt text-xs"></i>
                                     </button>
                                 {% endif %}

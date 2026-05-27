@@ -5,27 +5,27 @@
     <div class="flex items-center gap-3 mb-4">
         <i class="fas fa-shield-alt text-alert text-2xl"></i>
         <div>
-            <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">Admin Dashboard</h1>
-            <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">System Overview & Diagnostics</p>
+            <h1 class="font-display font-bold text-2xl text-gray-800 tracking-wider uppercase m-0">Admin Dashboard</h1>
+            <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">System Overview & Status</p>
         </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="content-card border-l-2 border-l-blue-500">
-            <h2 class="text-xs text-gray-500 font-semibold uppercase tracking-widest mb-1 flex items-center gap-2">
+        <div class="content-card border-l-2 border-l-blue-500 bg-white">
+            <h2 class="text-xs text-gray-550 font-semibold uppercase tracking-widest mb-1 flex items-center gap-2">
                 <i class="fas fa-users text-blue-500"></i> Total Users
             </h2>
-            <p class="text-3xl font-bold text-white font-sans mt-2">{{ total_users }}</p>
+            <p class="text-3xl font-bold text-gray-850 font-sans mt-2">{{ total_users }}</p>
         </div>
-        <div class="content-card border-l-2 border-l-accent">
-            <h2 class="text-xs text-gray-500 font-semibold uppercase tracking-widest mb-1 flex items-center gap-2">
+        <div class="content-card border-l-2 border-l-accent bg-white">
+            <h2 class="text-xs text-gray-550 font-semibold uppercase tracking-widest mb-1 flex items-center gap-2">
                 <i class="fas fa-fingerprint text-accent"></i> Total Events
             </h2>
-            <p class="text-3xl font-bold text-white font-sans mt-2">{{ total_auth_events }}</p>
+            <p class="text-3xl font-bold text-gray-850 font-sans mt-2">{{ total_auth_events }}</p>
         </div>
-        <div class="content-card border-l-2 border-l-alert">
-            <h2 class="text-xs text-gray-500 font-semibold uppercase tracking-widest mb-1 flex items-center gap-2">
-                <i class="fas fa-biohazard text-alert"></i> Possible Intrusions
+        <div class="content-card border-l-2 border-l-alert bg-white">
+            <h2 class="text-xs text-gray-550 font-semibold uppercase tracking-widest mb-1 flex items-center gap-2">
+                <i class="fas fa-exclamation-circle text-alert"></i> Suspicious Activities
             </h2>
             <p class="text-3xl font-bold text-alert font-sans mt-2">{{ auth_counts[1] }}</p>
         </div>
@@ -33,8 +33,8 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <!-- Roles Analysis Pie Chart -->
-        <div class="content-card">
-            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+        <div class="content-card bg-white">
+            <h2 class="text-sm font-semibold text-gray-600 uppercase tracking-widest mb-4 flex items-center gap-2">
                 <i class="fas fa-user-shield"></i> Users by Role
             </h2>
             <div class="h-[250px] relative">
@@ -43,9 +43,9 @@
         </div>
 
         <!-- Auth Analysis Doughnut Chart -->
-        <div class="content-card">
-            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <i class="fas fa-key"></i> Login & Registration Analysis
+        <div class="content-card bg-white">
+            <h2 class="text-sm font-semibold text-gray-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <i class="fas fa-key"></i> Logins & Signups Analysis
             </h2>
             <div class="h-[250px] relative">
                 <canvas id="authChart"></canvas>
@@ -56,7 +56,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.color = '#495057';
     Chart.defaults.font.family = "'JetBrains Mono', monospace";
 
     // Users by Role
@@ -69,7 +69,7 @@
                 label: 'Users by Role',
                 data: {{ roles_counts|tojson }},
                 backgroundColor: ['#3b82f6', '#1e40af', '#2563eb', '#60a5fa'],
-                borderColor: '#050505',
+                borderColor: '#ffffff',
                 borderWidth: 2,
                 cutout: '75%'
             }]
@@ -80,7 +80,7 @@
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: { color: '#94a3b8', padding: 20 }
+                    labels: { color: '#495057', padding: 20 }
                 }
             }
         }
@@ -93,10 +93,10 @@
         data: {
             labels: {{ auth_labels|tojson }},
             datasets: [{
-                label: 'Auth Events',
+                label: 'Events Count',
                 data: {{ auth_counts|tojson }},
-                backgroundColor: ['#00ff41', '#ff003c'],
-                borderColor: '#050505',
+                backgroundColor: ['#198754', '#dc3545'],
+                borderColor: '#ffffff',
                 borderWidth: 2,
                 cutout: '75%'
             }]
@@ -107,7 +107,7 @@
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: { color: '#94a3b8', padding: 20 }
+                    labels: { color: '#495057', padding: 20 }
                 }
             }
         }

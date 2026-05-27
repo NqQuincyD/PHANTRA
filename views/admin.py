@@ -47,6 +47,10 @@ def inject_notification_count():
 @adm_bp.route('/dashboard')
 @login_required
 def home():
+    if current_user.role != 'Admin':
+        flash('Access denied', 'danger')
+        return redirect(url_for('auth.login'))
+
     # Total users
     total_users = User.query.count()
 
@@ -106,12 +110,18 @@ def security_console():
 @adm_bp.route('/security-threats')
 @login_required
 def security_threats():
+    if current_user.role != 'Admin':
+        flash('Access denied', 'danger')
+        return redirect(url_for('auth.login'))
     return render_template('admin/threats.html')
 
 
 @adm_bp.route('/reports-analytics', methods=['GET', 'POST'])
 @login_required
 def reports_analytics():
+     if current_user.role != 'Admin':
+         flash('Access denied', 'danger')
+         return redirect(url_for('auth.login'))
      return render_template('admin/reports.html')
 
 
@@ -295,6 +305,9 @@ def delete_user(user_id):
 @adm_bp.route('/add-user', methods=['GET', 'POST'])
 @login_required
 def add_user():
+    if current_user.role != 'Admin':
+        flash('Access denied', 'danger')
+        return redirect(url_for('auth.login'))
     form = AddUserForm()
     if form.validate_on_submit():
         existing_user = User.query.filter_by(email=form.email.data).first()

@@ -9,7 +9,6 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split    
 from sklearn.ensemble import IsolationForest, RandomForestClassifier
-from sklearn.preprocessing import LabelEncoder
 import re
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -291,10 +290,19 @@ def visited_webs():
         global_users_data = FirebaseDB.get_global_users()
         
         # Merge them (prioritizing global data for a complete view)
-        global_usernames = [u['username'] for u in global_users_data if u.get('role') == 'User']
+        merged_users = {}
+        for u in local_users.values():
+            merged_users[u.username] = {'username': u.username, 'email': u.email}
+        for u in global_users_data:
+            if u.get('role') == 'User' and u.get('username'):
+                uname = u['username']
+                merged_users[uname] = {
+                    'username': uname,
+                    'email': u.get('email', 'Global User')
+                }
         
-        # Return a list of unique usernames for the dropdown
-        all_users = sorted(list(set(list(local_users.keys()) + global_usernames)))
+        # Return a list of sorted user dictionaries for the dropdown
+        all_users = [merged_users[uname] for uname in sorted(merged_users.keys())]
     
     username = (
         request.form.get('username')
@@ -670,9 +678,21 @@ def visited_applications():
         local_users = {u.username: u for u in User.query.filter_by(role='User').all()}
         # Get global users from Firebase
         global_users_data = FirebaseDB.get_global_users()
+        
         # Merge them
-        global_usernames = [u['username'] for u in global_users_data if u.get('role') == 'User']
-        all_users = sorted(list(set(list(local_users.keys()) + global_usernames)))
+        merged_users = {}
+        for u in local_users.values():
+            merged_users[u.username] = {'username': u.username, 'email': u.email}
+        for u in global_users_data:
+            if u.get('role') == 'User' and u.get('username'):
+                uname = u['username']
+                merged_users[uname] = {
+                    'username': uname,
+                    'email': u.get('email', 'Global User')
+                }
+        
+        # Return a list of sorted user dictionaries for the dropdown
+        all_users = [merged_users[uname] for uname in sorted(merged_users.keys())]
     
     if request.method == 'POST':
         try:
@@ -895,10 +915,10 @@ def update_ml_pipeline():
         df['url_depth'] = df['URL'].str.count('/') - 2
         df['has_query'] = df['URL'].str.contains(r'\?', regex=False).astype(int)
 
-        from sklearn.preprocessing import LabelEncoder
         from sklearn.ensemble import IsolationForest
-        # Behavioral features
-        df['browser_code'] = LabelEncoder().fit_transform(df['Browser'])
+        # Deterministic Browser Mapping
+        BROWSER_MAP = {'chrome': 0, 'firefox': 1, 'edge': 2, 'safari': 3, 'opera': 4, 'unknown': 5}
+        df['browser_code'] = df['Browser'].map(BROWSER_MAP).fillna(5).astype(int)
         df['visits_per_hour'] = df.groupby(
             [df['Last Visit'].dt.date, df['Last Visit'].dt.hour]
         )['Visit Count'].transform('sum')
@@ -919,10 +939,13 @@ def update_ml_pipeline():
             )
             model.fit(X)
             df['anomaly_score'] = model.decision_function(X)
-            df['is_anomaly'] = model.predict(X)
+            # Corrected prediction: in IsolationForest, normal is 1 and anomaly is -1.
+            # Convert to: Anomaly -> 1, Normal -> 0.
+            predictions = model.predict(X)
+            df['is_anomaly'] = (predictions == -1).astype(int)
         else:
             df['anomaly_score'] = 0.0
-            df['is_anomaly'] = 1
+            df['is_anomaly'] = 0
 
         # Calculate threat score
         df['threat_score'] = 0
@@ -976,16 +999,16 @@ def anomaly_detection():
     df = get_ml_df()
     if current_user.role != 'Admin':
         df = df[df['Username'] == current_user.username]
-    # Get the top 15 detected anomalies
-    anomalies = df[['Username', 'Browser', 'Title', 'anomaly_score', 'is_anomaly']].sort_values('anomaly_score').head(15)
+    # Get the top 15 detected anomalies sorted by current date and time
+    anomalies = df[['Username', 'Browser', 'Title', 'Last Visit', 'anomaly_score', 'is_anomaly']].sort_values('Last Visit', ascending=False).head(15)
     
     # Get the threat detection results
     threat_detection = df[[col for col in df.columns if col.startswith('is_')]].sum().sort_values(ascending=False)
 
-    # Get high-risk activities
+    # Get high-risk activities sorted by current date and time
     high_risk = df[df['risk_level'].isin(['High', 'Critical'])][
         ['Username', 'Browser', 'Title', 'Last Visit', 'risk_level', 'composite_risk']
-    ].sort_values('composite_risk', ascending=False).head(20)
+    ].sort_values('Last Visit', ascending=False).head(20)
 
     # === New: Behavior Analysis Summary ===
     total_records = len(df)
@@ -1104,10 +1127,8 @@ def notifications():
             })
     
     
-    notifications.sort(key=lambda x: (
-        0 if x['risk'] == 'Critical' else 1,
-        -pd.to_datetime(x['timestamp']).timestamp()
-    ))
+    # Sort strictly by timestamp descending (most recent first)
+    notifications.sort(key=lambda x: -pd.to_datetime(x['timestamp']).timestamp())
     
     from models import UserActivity
     admin_messages = []
@@ -1220,7 +1241,8 @@ def predict_user_behavior(file_path):
     df['has_query'] = df['URL'].str.contains(r'\?', regex=False).astype(int)
 
     # Browser features
-    df['browser_code'] = LabelEncoder().fit_transform(df['Browser'])
+    BROWSER_MAP = {'chrome': 0, 'firefox': 1, 'edge': 2, 'safari': 3, 'opera': 4, 'unknown': 5}
+    df['browser_code'] = df['Browser'].map(BROWSER_MAP).fillna(5).astype(int)
     df['visits_per_hour'] = df.groupby(
         [df['Last Visit'].dt.date, df['Last Visit'].dt.hour]
     )['Visit Count'].transform('sum')
@@ -1233,13 +1255,16 @@ def predict_user_behavior(file_path):
     ]
     X = df[features]
 
-    # Isolation Forest
-    model = IsolationForest(
-        n_estimators=150, max_samples=0.8, contamination='auto',
-        random_state=42, n_jobs=-1
-    )
-    model.fit(X)
-    df['is_anomaly'] = model.predict(X)  # -1 = unusual, 1 = normal
+    # Isolation Forest Anomaly Detection with robust sample guard
+    if not df.empty and len(df) >= 5:
+        model = IsolationForest(
+            n_estimators=150, max_samples=0.8, contamination='auto',
+            random_state=42, n_jobs=-1
+        )
+        model.fit(X)
+        df['is_anomaly'] = model.predict(X)  # -1 = unusual, 1 = normal
+    else:
+        df['is_anomaly'] = 1  # Default to normal for small datasets
 
     # Map to readable behavior
     df['behavior'] = df['is_anomaly'].map({1: 'Normal', -1: 'Unusual'})
@@ -1254,7 +1279,29 @@ def predict_user_behavior(file_path):
 @user_bp.route('/user-behaviour', methods=['GET', 'POST'])
 def user_behavior():
     file_path = os.path.join(EXPORT_DIR, EXPORT_FILENAME)
-    behavior_status, features = predict_user_behavior(file_path)
+    
+    # Gracefully check if file exists to prevent crashing the server
+    if not os.path.exists(file_path):
+        flash('No telemetry records detected. Please perform an extraction scan first.', 'info')
+        return render_template(
+            'user/behaviour.html',
+            behavior_status='No Data Available',
+            features={f: 0 for f in [
+                'is_betting','is_porn','is_trading','is_hacking','is_money',
+                'hour','is_weekend','late_night','url_length','url_depth',
+                'has_query','visits_per_hour','browser_code'
+            ]}
+        )
+        
+    try:
+        behavior_status, features = predict_user_behavior(file_path)
+    except Exception as e:
+        flash(f'Telemetry Analysis Error: {str(e)}', 'error')
+        return render_template(
+            'user/behaviour.html',
+            behavior_status='Error',
+            features={}
+        )
     
     return render_template(
         'user/behaviour.html',

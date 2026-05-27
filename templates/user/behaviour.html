@@ -5,7 +5,7 @@
     <div class="flex items-center gap-3 mb-8">
         <i class="fas fa-brain text-accent text-2xl"></i>
         <div>
-            <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">Behavioral Intelligence</h1>
+            <h1 class="font-display font-bold text-2xl text-gray-800 tracking-wider uppercase m-0">Behavioral Intelligence</h1>
             <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">Predictive Analysis & User Entropy Mapping</p>
         </div>
     </div>
@@ -22,11 +22,11 @@
                         {{ behavior_status }}
                     </div>
                 </div>
-                <p class="text-[9px] text-gray-600 uppercase tracking-widest mt-6 font-bold">
+                <p class="text-[9px] text-gray-650 uppercase tracking-widest mt-6 font-bold">
                     {% if behavior_status == 'Unusual' %}Deviation Detected in Activity Buffer{% else %}Behavioral Pattern within Normal Variance{% endif %}
                 </p>
             {% else %}
-                <div class="flex items-center gap-3 text-gray-600">
+                <div class="flex items-center gap-3 text-gray-650">
                     <i class="fas fa-sync fa-spin text-sm"></i>
                     <span class="text-[10px] font-bold uppercase tracking-widest">Hydrating Model Buffers...</span>
                 </div>
@@ -36,10 +36,10 @@
         <!-- Features Table -->
         <div class="content-card lg:col-span-2 space-y-4">
             <div class="flex items-center justify-between border-b border-base-600 pb-3">
-                <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <h3 class="text-[10px] font-bold text-gray-550 uppercase tracking-widest flex items-center gap-2">
                     <i class="fas fa-list-ul text-blue-500"></i> Vector Input Stream
                 </h3>
-                <span class="text-[9px] font-mono text-blue-400 bg-blue-500/10 px-2 py-0.5 border border-blue-500/20">{{ features|length }} DIMENSIONS</span>
+                <span class="text-[9px] font-mono text-blue-600 bg-blue-50 px-2 py-0.5 border border-blue-100 rounded">{{ features|length }} DIMENSIONS</span>
             </div>
 
             <div class="dataframe-container">
@@ -53,8 +53,8 @@
                     <tbody>
                         {% for key, value in features.items() %}
                         <tr>
-                            <td class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{{ key.replace('_', ' ') }}</td>
-                            <td class="text-right font-mono text-xs text-accent">{{ value }}</td>
+                            <td class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{{ key.replace('_', ' ') }}</td>
+                            <td class="text-right font-mono text-xs text-accent font-bold">{{ value }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -64,11 +64,11 @@
     </div>
 
     <!-- Explanation card -->
-    <div class="content-card bg-base-900/30 border-dashed border-base-700">
+    <div class="content-card bg-gray-50 border-dashed border-gray-200">
         <div class="flex gap-4 items-start">
             <i class="fas fa-info-circle text-blue-500 mt-1"></i>
             <div class="space-y-1">
-                <h4 class="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Neural Network Logic</h4>
+                <h4 class="text-[10px] font-bold text-gray-700 uppercase tracking-widest">Neural Network Logic</h4>
                 <p class="text-[11px] text-gray-500 leading-relaxed uppercase">
                     The Behavioral Intelligence module utilizes an Isolation Forest algorithm to detect anomalies in real-time telemetry. Measurements outside established baseline variances trigger automated threat escalation protocols.
                 </p>

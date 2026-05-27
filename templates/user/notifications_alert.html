@@ -6,13 +6,13 @@
         <div class="flex items-center gap-3">
             <i class="fas fa-bell text-alert text-2xl"></i>
             <div>
-                <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">Risk Alerts</h1>
-                <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">High-Risk Activity Telemetry & Incident Audit</p>
+                <h1 class="font-display font-bold text-2xl text-gray-800 tracking-wider uppercase m-0">Security Warnings</h1>
+                <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">Details on high-risk actions and recommended safeties</p>
             </div>
         </div>
         {% if notifications %}
-        <button class="px-4 py-2 border border-blue-500/30 bg-blue-500/10 text-blue-500 font-bold uppercase tracking-widest text-[10px] hover:bg-blue-500 hover:text-base-900 transition-all flex items-center gap-2" onclick="markAllRead()">
-            <i class="fas fa-check-double"></i> Acknowledge All
+        <button class="px-4 py-2 border border-blue-500/30 bg-blue-50 text-blue-600 font-bold uppercase tracking-widest text-[10px] hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2 rounded shadow-sm" onclick="markAllRead()">
+            <i class="fas fa-check-double"></i> Clear All Warnings
         </button>
         {% endif %}
     </div>
@@ -21,83 +21,83 @@
     <div class="space-y-4">
         {% for notification in notifications %}
         <div class="content-card relative overflow-hidden border-l-4 {{ 'border-alert' if notification.risk == 'Critical' else 'border-orange-500' }}">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 border-b border-base-600 pb-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 border-b border-gray-200 pb-4">
                 <div class="flex items-center gap-3 flex-wrap">
-                    <span class="px-2 py-0.5 bg-blue-500/10 text-blue-500 border border-blue-500/30 text-[10px] font-bold uppercase tracking-wider rounded font-mono">
-                        USR: {{ notification.username }}
+                    <span class="px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 text-[10px] font-bold uppercase tracking-wider rounded font-mono">
+                        User: {{ notification.username }}
                     </span>
-                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">{{ notification.category }}</span>
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-widest">{{ notification.category }}</span>
                     {% if notification.is_sensitive %}
-                    <span class="px-2 py-0.5 bg-alert/10 text-alert border border-alert/30 text-[10px] font-bold uppercase tracking-wider rounded">SENSITIVE</span>
+                    <span class="px-2 py-0.5 bg-alert/10 text-alert border border-alert/20 text-[10px] font-bold uppercase tracking-wider rounded">Sensitive Content</span>
                     {% endif %}
                 </div>
                 <div class="flex items-center gap-4">
                     <span class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest {{ 'text-alert animate-pulse' if notification.risk == 'Critical' else 'text-orange-500' }}">
-                        <i class="fas fa-exclamation-triangle"></i> {{ notification.risk }} THREAT
+                        <i class="fas fa-exclamation-triangle"></i> {{ notification.risk }} Risk Level
                     </span>
-                    <button class="text-gray-500 hover:text-white transition-colors" onclick="markAlertRead('{{ notification.history_id }}')" title="Acknowledge Record">
-                        <i class="fas fa-check"></i>
+                    <button class="text-gray-400 hover:text-accent transition-colors p-1" onclick="markAlertRead('{{ notification.history_id }}')" title="Acknowledge Warning">
+                        <i class="fas fa-check text-sm"></i>
                     </button>
                 </div>
             </div>
 
             <div class="space-y-4">
-                <h3 class="text-white font-bold text-lg tracking-tight">{{ notification.title|truncate(120) }}</h3>
+                <h3 class="text-gray-800 font-bold text-lg tracking-tight">{{ notification.title|truncate(120) }}</h3>
                 
-                <div class="p-3 bg-base-900/80 border border-base-600 font-mono text-[11px] text-gray-400 break-all select-none opacity-50 cursor-not-allowed notification-url" title="Endpoint locked for security reasons">
+                <div class="p-3 bg-gray-50 border border-gray-200 font-mono text-[11px] text-gray-600 break-all select-none opacity-80 cursor-not-allowed rounded" title="Link locked for safety reasons">
                     {{ notification.url }}
                 </div>
 
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Origin Domain</label>
-                        <p class="text-xs font-mono text-gray-300 truncate">{{ notification.domain }}</p>
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Website Address</label>
+                        <p class="text-xs font-mono text-gray-700 truncate" title="{{ notification.domain }}">{{ notification.domain }}</p>
                     </div>
                     <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Incident Hits</label>
-                        <p class="text-xs font-mono text-gray-300">{{ notification.visit_count }}</p>
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Visit Count</label>
+                        <p class="text-xs font-mono text-gray-700">{{ notification.visit_count }}</p>
                     </div>
                     <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Threat Vector</label>
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Risk Rating</label>
                         <p class="text-xs font-mono text-accent font-bold">{{ notification.threat_score }}</p>
                     </div>
                     <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Anomaly Flux</label>
-                        <p class="text-xs font-mono text-gray-300">{{ notification.anomaly_score }}</p>
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Unusual Behavior Score</label>
+                        <p class="text-xs font-mono text-gray-700">{{ notification.anomaly_score }}</p>
                     </div>
                 </div>
 
                 {% if notification.recommendation %}
                 <div class="p-3 bg-accent/5 border border-accent/20 rounded flex items-start gap-3">
                     <i class="fas fa-shield-alt text-accent mt-0.5"></i>
-                    <p class="text-xs text-accent/80 font-medium leading-relaxed">
-                        <span class="font-bold uppercase tracking-widest mr-2">Directive:</span> {{ notification.recommendation }}
+                    <p class="text-xs text-accent font-medium leading-relaxed">
+                        <span class="font-bold uppercase tracking-widest mr-2">Action Recommended:</span> {{ notification.recommendation }}
                     </p>
                 </div>
                 {% endif %}
 
                 {% if current_user.role == 'Admin' %}
-                <div class="pt-4 border-t border-base-600 flex flex-wrap gap-2">
-                    <button onclick="takeAction('{{ notification.username }}', 'Warning')" class="px-3 py-1.5 bg-orange-500/10 text-orange-500 border border-orange-500/30 text-[10px] font-bold uppercase tracking-widest hover:bg-orange-500 hover:text-base-900 transition-all flex items-center gap-2">
+                <div class="pt-4 border-t border-gray-200 flex flex-wrap gap-2">
+                    <button onclick="takeAction('{{ notification.username }}', 'Warning')" class="px-3 py-1.5 bg-orange-50 text-orange-600 border border-orange-200 text-[10px] font-bold uppercase tracking-widest hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-all flex items-center gap-2 rounded">
                         <i class="fas fa-exclamation-triangle"></i> Issue Warning
                     </button>
-                    <button onclick="takeAction('{{ notification.username }}', 'Suspend')" class="px-3 py-1.5 bg-alert/10 text-alert border border-alert/30 text-[10px] font-bold uppercase tracking-widest hover:bg-alert hover:text-base-900 transition-all flex items-center gap-2">
-                        <i class="fas fa-ban"></i> Suspend Node
+                    <button onclick="takeAction('{{ notification.username }}', 'Suspend')" class="px-3 py-1.5 bg-alert/10 text-alert border border-alert/20 text-[10px] font-bold uppercase tracking-widest hover:bg-alert hover:text-white hover:border-alert transition-all flex items-center gap-2 rounded">
+                        <i class="fas fa-ban"></i> Suspend User
                     </button>
-                    <button onclick="takeAction('{{ notification.username }}', 'Resolve')" class="px-3 py-1.5 bg-accent/10 text-accent border border-accent/30 text-[10px] font-bold uppercase tracking-widest hover:bg-accent hover:text-base-900 transition-all flex items-center gap-2">
-                        <i class="fas fa-check"></i> Resolve Incident
+                    <button onclick="takeAction('{{ notification.username }}', 'Resolve')" class="px-3 py-1.5 bg-accent-muted text-accent border border-accent/20 text-[10px] font-bold uppercase tracking-widest hover:bg-accent hover:text-white hover:border-accent transition-all flex items-center gap-2 rounded">
+                        <i class="fas fa-check"></i> Mark Resolved
                     </button>
                 </div>
                 {% else %}
                 {% if admin_messages %}
-                <div class="p-4 bg-orange-500/5 border border-orange-500/20 rounded space-y-3">
-                    <h4 class="text-[10px] font-bold text-orange-500 uppercase tracking-widest flex items-center gap-2">
-                        <i class="fas fa-envelope"></i> Command Directives
+                <div class="p-4 bg-orange-50 border border-orange-200 rounded space-y-3">
+                    <h4 class="text-[10px] font-bold text-orange-600 uppercase tracking-widest flex items-center gap-2">
+                        <i class="fas fa-envelope"></i> Admin Instructions
                     </h4>
                     <ul class="space-y-2">
                         {% for msg in admin_messages %}
-                        <li class="text-[11px] text-orange-200/70 list-disc list-inside">
-                            {{ msg.details }} <span class="text-[9px] opacity-50 ml-2 font-mono">[{{ msg.timestamp }}]</span>
+                        <li class="text-[11px] text-orange-700 list-disc list-inside">
+                            {{ msg.details }} <span class="text-[9px] opacity-60 ml-2 font-mono">[{{ msg.timestamp }}]</span>
                         </li>
                         {% endfor %}
                     </ul>
@@ -106,20 +106,20 @@
                 {% endif %}
             </div>
 
-            <div class="mt-6 text-[10px] font-mono text-gray-500 uppercase tracking-widest text-right">
-                Detection Timestamp: {{ notification.timestamp }}
+            <div class="mt-6 text-[10px] font-mono text-gray-400 uppercase tracking-widest text-right">
+                Detected at: {{ notification.timestamp }}
             </div>
         </div>
         {% endfor %}
     </div>
     {% else %}
     <div class="content-card py-16 flex flex-col items-center justify-center text-center space-y-4">
-        <div class="w-16 h-16 bg-accent/10 border border-accent/30 rounded-full flex items-center justify-center text-accent">
+        <div class="w-16 h-16 bg-accent-muted border border-accent/20 rounded-full flex items-center justify-center text-accent">
             <i class="fas fa-check-circle text-3xl"></i>
         </div>
         <div>
-            <h3 class="text-sm font-bold text-gray-300 uppercase tracking-widest">Sector Clear</h3>
-            <p class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">No high-risk activity detected in monitored channels</p>
+            <h3 class="text-sm font-bold text-gray-700 uppercase tracking-widest">System Safe</h3>
+            <p class="text-[10px] text-gray-500 uppercase tracking-widest mt-1">No unusual or high-risk activity has been detected.</p>
         </div>
     </div>
     {% endif %}
@@ -131,13 +131,13 @@
         urlElements.forEach(element => {
             element.addEventListener('contextmenu', e => {
                 e.preventDefault();
-                alert('Incident telemetry endpoints are locked for security audit purposes.');
+                alert('Warning: Link addresses are locked for security and analysis purposes.');
             });
         });
     });
 
     function takeAction(username, action) {
-        if (!confirm(`CONFIRM: ${action.toUpperCase()} operation for node ${username}?`)) return;
+        if (!confirm(`Confirm Action: Do you want to issue a ${action} to ${username}?`)) return;
 
         fetch('/user/take-action', {
             method: 'POST',
@@ -147,15 +147,15 @@
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                alert(`SUCCESS: Directive ${action} propagated to ${username}.`);
+                alert(`Success: Action '${action}' successfully sent to user ${username}.`);
                 window.location.reload();
             } else {
-                alert(`FAILURE: Access denied - ${data.message}`);
+                alert(`Failed: Access denied - ${data.message}`);
             }
         })
         .catch(error => {
-            console.error('Telepathy Error:', error);
-            alert('CRITICAL: Communication failure with security core.');
+            console.error('Error:', error);
+            alert('Communication failure with the security core.');
         });
     }
 
@@ -172,10 +172,10 @@
             if (data.status === 'success') {
                 window.location.reload();
             } else {
-                alert('Error acknowledging incident: ' + data.message);
+                alert('Error acknowledging alert: ' + data.message);
             }
         })
-        .catch(error => console.error('Signal Loss:', error));
+        .catch(error => console.error('Connection lost:', error));
     }
 
     function markAllRead() {
@@ -189,7 +189,7 @@
         });
 
         if (historyIds.length === 0) return;
-        if (!confirm('Acknowledge all current threat telemetry?')) return;
+        if (!confirm('Are you sure you want to clear all current warnings?')) return;
 
         fetch('/user/mark-alert-read', {
             method: 'POST',

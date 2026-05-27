@@ -2,33 +2,33 @@
 
 {% block content %}
 <div class="space-y-6">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-base-600 pb-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-gray-200 pb-4">
         <div class="flex items-center gap-3">
             <i class="fas fa-user-circle text-alert text-3xl"></i>
             <div>
-                <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">Entity Profile</h1>
+                <h1 class="font-display font-bold text-2xl text-gray-800 tracking-wider uppercase m-0">Entity Profile</h1>
                 <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">ID_REF: {{ user.id }} // {{ user.username }}</p>
             </div>
         </div>
-        <a href="{{ url_for('admin.monitoring_hub') }}" class="px-4 py-2 text-[10px] font-bold uppercase tracking-widest border border-base-600 text-gray-400 hover:bg-base-800 hover:text-white transition-colors flex items-center gap-2">
+        <a href="{{ url_for('admin.monitoring_hub') }}" class="px-4 py-2 text-[10px] font-bold uppercase tracking-widest border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-855 transition-colors flex items-center gap-2 rounded shadow-sm">
             <i class="fas fa-arrow-left"></i> Return to Registry
         </a>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 space-y-6">
-            <div class="content-card">
-                <h4 class="text-xs text-gray-500 uppercase tracking-widest font-bold mb-6 border-b border-base-600 pb-2">Core Identity Details</h4>
+            <div class="content-card bg-white border border-gray-200 rounded">
+                <h4 class="text-xs text-gray-500 uppercase tracking-widest font-bold mb-6 border-b border-gray-200 pb-2">Core Identity Details</h4>
                 <div class="space-y-4">
-                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-base-600/50 pb-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-gray-100 pb-3">
                         <div class="w-40 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Username</div>
-                        <div class="text-sm font-bold text-white font-mono uppercase">{{ user.username }}</div>
+                        <div class="text-sm font-bold text-gray-800 font-mono uppercase">{{ user.username }}</div>
                     </div>
-                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-base-600/50 pb-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-gray-100 pb-3">
                         <div class="w-40 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Email Address</div>
-                        <div class="text-sm text-gray-300 font-mono">{{ user.email }}</div>
+                        <div class="text-sm text-gray-700 font-mono">{{ user.email }}</div>
                     </div>
-                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-base-600/50 pb-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-gray-100 pb-3">
                         <div class="w-40 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Access Privilege</div>
                         <div>
                             {% if user.role == 'Admin' %}
@@ -48,81 +48,81 @@
                     </div>
                     <div class="flex flex-col sm:flex-row gap-2 pt-1">
                         <div class="w-40 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Last Auth Event</div>
-                        <div class="text-xs text-gray-300">
+                        <div class="text-xs text-gray-700">
                             {% if last_login %}
-                                <div class="font-mono text-white mb-1 uppercase">{{ last_login.timestamp.strftime('%Y-%m-%d // %H:%M:%S') }}</div>
+                                <div class="font-mono text-gray-800 mb-1 uppercase">{{ last_login.timestamp.strftime('%Y-%m-%d // %H:%M:%S') }}</div>
                                 <div class="text-[10px] text-gray-500 font-mono tracking-widest uppercase">IP_ADDR: {{ last_login.ip_address }}</div>
                             {% else %}
-                                <span class="text-gray-600 italic text-[10px] uppercase tracking-widest">No auth records found</span>
+                                <span class="text-gray-500 italic text-[10px] uppercase tracking-widest">No auth records found</span>
                             {% endif %}
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="content-card">
-                <h4 class="text-xs text-gray-500 uppercase tracking-widest font-bold mb-6 border-b border-base-600 pb-2">Recent Telemetry Stream</h4>
+            <div class="content-card bg-white border border-gray-200 rounded">
+                <h4 class="text-xs text-gray-500 uppercase tracking-widest font-bold mb-6 border-b border-gray-200 pb-2">Recent Telemetry Stream</h4>
                 <ul class="space-y-4">
                     {% for activity in activities %}
-                        <li class="border-l-2 border-base-600 pl-4 py-2 hover:bg-base-800 transition-colors">
+                        <li class="border-l-2 border-gray-300 pl-4 py-2 hover:bg-blue-50/30 transition-colors">
                             <div class="text-[10px] font-mono text-gray-500 mb-1 uppercase tracking-tighter">{{ activity.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</div>
-                            <div class="text-xs text-gray-300">
-                                <span class="font-bold text-white uppercase tracking-widest mr-2">{{ activity.activity_type }}:</span>
-                                <span class="text-gray-400">{{ activity.details }}</span>
+                            <div class="text-xs text-gray-700">
+                                <span class="font-bold text-gray-800 uppercase tracking-widest mr-2">{{ activity.activity_type }}:</span>
+                                <span class="text-gray-600">{{ activity.details }}</span>
                             </div>
                         </li>
                     {% else %}
-                        <li class="text-center py-8 text-gray-600 text-[10px] font-bold uppercase tracking-[0.2em]">Zero activity telemetry in active buffer</li>
+                        <li class="text-center py-8 text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em]">Zero activity telemetry in active buffer</li>
                     {% endfor %}
                 </ul>
             </div>
 
-            <div class="content-card border-l-2 border-l-alert/50">
-                <div class="flex items-center justify-between mb-6 border-b border-base-600 pb-2">
-                    <h4 class="text-xs text-alert font-bold uppercase tracking-widest">Cloud Intelligence <span class="text-gray-600">// Firebase Firestore</span></h4>
+            <div class="content-card border-l-2 border-l-alert/50 bg-white border border-gray-200 rounded">
+                <div class="flex items-center justify-between mb-6 border-b border-gray-200 pb-2">
+                    <h4 class="text-xs text-alert font-bold uppercase tracking-widest">Cloud Intelligence <span class="text-gray-500">// Firebase Firestore</span></h4>
                     <span class="text-[9px] text-alert bg-alert/10 px-1.5 py-0.5 rounded animate-pulse">LIVE CLOUD SYNC</span>
                 </div>
                 <ul class="space-y-4">
                     {% for act in cloud_activities %}
-                        <li class="border-l-2 border-alert/20 pl-4 py-2 bg-white/5 hover:bg-white/10 transition-all group">
+                        <li class="border-l-2 border-alert/20 pl-4 py-2 bg-gray-50 hover:bg-gray-100 transition-all group rounded-r border border-l-0 border-gray-200">
                             <div class="flex justify-between items-start mb-1">
-                                <div class="text-[10px] font-mono text-alert/60 uppercase tracking-tighter">
+                                <div class="text-[10px] font-mono text-alert/70 uppercase tracking-tighter">
                                     {% if act.timestamp %}
                                         {{ act.timestamp.strftime('%Y-%m-%d %H:%M:%S') if hasattr(act.timestamp, 'strftime') else act.timestamp }}
                                     {% else %}
                                         TIMESTAMP_UNKNOWN
                                     {% endif %}
                                 </div>
-                                <i class="fas fa-cloud text-[9px] text-alert/40 group-hover:text-alert transition-colors"></i>
+                                <i class="fas fa-cloud text-[9px] text-alert/50 group-hover:text-alert transition-colors"></i>
                             </div>
-                            <div class="text-xs text-gray-300">
-                                <span class="font-bold text-white uppercase tracking-widest mr-2">{{ act.activity_type }}:</span>
-                                <span class="text-gray-400">{{ act.details }}</span>
+                            <div class="text-xs text-gray-700">
+                                <span class="font-bold text-gray-800 uppercase tracking-widest mr-2">{{ act.activity_type }}:</span>
+                                <span class="text-gray-650">{{ act.details }}</span>
                             </div>
                         </li>
                     {% else %}
-                        <li class="text-center py-8 text-gray-600 text-[10px] font-bold uppercase tracking-[0.2em]">No cloud records synchronized yet</li>
+                        <li class="text-center py-8 text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em]">No cloud records synchronized yet</li>
                     {% endfor %}
                 </ul>
             </div>
         </div>
         
         <div class="space-y-4">
-            <div class="content-card border-l-2 border-l-alert bg-alert/5">
-                <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Auth Success Rate</div>
-                <div class="text-3xl font-bold text-white font-mono">{{ total_logins }} <span class="text-xs text-gray-600 font-normal">SESSIONS</span></div>
+            <div class="content-card border-l-2 border-l-alert bg-alert/5 bg-white border border-gray-200 rounded">
+                <div class="text-[10px] font-bold text-gray-550 uppercase tracking-widest mb-2">Auth Success Rate</div>
+                <div class="text-3xl font-bold text-gray-800 font-mono">{{ total_logins }} <span class="text-xs text-gray-500 font-normal">SESSIONS</span></div>
             </div>
-            <div class="content-card border-l-2 border-l-accent bg-accent/5">
-                <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Browsing Telemetry</div>
-                <div class="text-3xl font-bold text-white font-mono">{{ total_history }} <span class="text-xs text-gray-600 font-normal">NODES</span></div>
+            <div class="content-card border-l-2 border-l-accent bg-accent/5 bg-white border border-gray-200 rounded">
+                <div class="text-[10px] font-bold text-gray-555 uppercase tracking-widest mb-2">Browsing Telemetry</div>
+                <div class="text-3xl font-bold text-gray-800 font-mono">{{ total_history }} <span class="text-xs text-gray-500 font-normal">NODES</span></div>
             </div>
             
             <div class="pt-4 space-y-2">
-                <a href="{{ url_for('admin.update_user', user_id=user.id) }}" class="w-full py-3 border border-base-600 text-gray-400 hover:border-white hover:text-white transition-colors text-center block text-[10px] font-bold uppercase tracking-widest">
+                <a href="{{ url_for('admin.update_user', user_id=user.id) }}" class="w-full py-3 border border-gray-200 text-gray-500 hover:border-accent hover:text-accent hover:bg-accent-muted transition-colors text-center block text-[10px] font-bold uppercase tracking-widest rounded shadow-sm">
                     <i class="fas fa-edit mr-2"></i> Modify Entity
                 </a>
                 {% if current_user.id != user.id %}
-                <button onclick="deleteUser({{ user.id }}, '{{ user.username }}')" class="w-full py-3 border border-alert/30 text-alert hover:bg-alert/10 transition-colors text-center text-[10px] font-bold uppercase tracking-widest">
+                <button onclick="deleteUser({{ user.id }}, '{{ user.username }}')" class="w-full py-3 border border-alert/30 text-alert hover:bg-alert/10 transition-colors text-center text-[10px] font-bold uppercase tracking-widest rounded">
                     <i class="fas fa-trash-alt mr-2"></i> Purge Entity
                 </button>
                 {% endif %}

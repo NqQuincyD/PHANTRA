@@ -5,33 +5,33 @@
     <div class="flex items-center gap-3 mb-8">
         <i class="fas fa-laptop text-blue-500 text-2xl"></i>
         <div>
-            <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">Registered Endpoints</h1>
-            <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">Asset Inventory & Node Authority Management</p>
+            <h1 class="font-display font-bold text-2xl text-gray-800 tracking-wider uppercase m-0">Registered Computers</h1>
+            <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">Manage and view registered computer systems</p>
         </div>
     </div>
 
     <!-- Search/Filter Controls -->
-    <div class="content-card bg-base-900/50 border-base-700/50">
+    <div class="content-card bg-white border border-gray-200 p-4 rounded shadow-sm">
         <div class="space-y-4">
             <div class="flex items-center gap-2">
-                <i class="fas fa-search text-gray-600 text-xs"></i>
-                <label class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Identify Node by Operator</label>
+                <i class="fas fa-search text-gray-400 text-xs"></i>
+                <label class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Search for computers by owner</label>
             </div>
-            <div class="flex items-center gap-px">
-                <input type="text" id="searchByName" class="flex-1 bg-base-900 border border-base-600 text-xs text-gray-300 px-4 py-2.5 focus:border-blue-500 outline-none transition-colors" placeholder="ENTER OPERATOR NAME...">
-                <button id="searchByNameButton" class="px-6 py-2.5 bg-base-900 border border-base-600 text-[10px] font-bold text-gray-500 hover:text-white transition-colors border-l-0 uppercase tracking-widest">Execute</button>
+            <div class="flex items-center gap-2">
+                <input type="text" id="searchByName" class="input-field flex-1 text-xs px-4 py-2.5" placeholder="Enter owner name...">
+                <button id="searchByNameButton" class="px-6 py-2.5 bg-accent text-white border border-accent text-[10px] font-bold hover:bg-blue-600 transition-colors uppercase tracking-widest rounded shadow-sm">Search</button>
             </div>
-            <div id="searchResults" class="hidden absolute bg-base-900 border border-base-600 w-[calc(100%-2rem)] z-50 shadow-2xl max-h-48 overflow-y-auto"></div>
+            <div id="searchResults" class="hidden absolute bg-white border border-gray-200 w-[calc(100%-2rem)] z-50 shadow-lg max-h-48 overflow-y-auto rounded mt-1"></div>
         </div>
     </div>
 
     {% if computers %}
-    <div class="content-card space-y-4">
-        <div class="flex items-center justify-between border-b border-base-600 pb-3">
-            <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                <i class="fas fa-server text-blue-500"></i> Active Node Registry
+    <div class="content-card space-y-4 bg-white">
+        <div class="flex items-center justify-between border-b border-gray-200 pb-3">
+            <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                <i class="fas fa-server text-blue-500"></i> Active Computers
             </h3>
-            <span class="text-[9px] font-mono text-blue-400 bg-blue-500/10 px-2 py-0.5 border border-blue-500/20">{{ computers|length }} ASSETS</span>
+            <span class="text-[9px] font-mono text-blue-600 bg-blue-50 px-2 py-0.5 border border-blue-100 rounded">{{ computers|length }} DEVICES</span>
         </div>
         
         <div class="dataframe-container overflow-x-auto">
@@ -45,51 +45,51 @@
                         <th>SERIAL NO.</th>
                         <th>ASSIGNED TO</th>
                         <th>STATUS</th>
-                        <th class="text-right">NODE OPS</th>
+                        <th class="text-right">ACTIONS</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for computer in computers %}
                     <tr data-name="{{ computer.full_name.lower() }}">
-                        <td class="font-mono text-gray-600">{{ computer.id }}</td>
+                        <td class="font-mono text-gray-500">{{ computer.id }}</td>
                         <td>
                             <div class="flex items-center gap-2">
-                                <i class="fas fa-laptop text-gray-500"></i>
-                                <span class="text-white font-bold">{{ computer.laptop_name }}</span>
+                                <i class="fas fa-laptop text-gray-400"></i>
+                                <span class="text-gray-800 font-bold">{{ computer.laptop_name }}</span>
                             </div>
                         </td>
-                        <td class="text-xs text-gray-400">{{ computer.laptop_model }}</td>
+                        <td class="text-xs text-gray-600">{{ computer.laptop_model }}</td>
                         <td>
                             {% set os = computer.laptop_os.lower() %}
-                            <span class="px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border
-                                {% if 'windows' in os %}border-blue-500/30 bg-blue-500/10 text-blue-400
-                                {% elif 'mac' in os %}border-gray-500/30 bg-gray-500/10 text-gray-300
-                                {% elif 'linux' in os %}border-orange-500/30 bg-orange-500/10 text-orange-400
-                                {% else %}border-base-600 bg-base-900 text-gray-500{% endif %}">
+                            <span class="px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border rounded-sm
+                                {% if 'windows' in os %}border-blue-200 bg-blue-50 text-blue-600
+                                {% elif 'mac' in os %}border-gray-200 bg-gray-50 text-gray-600
+                                {% elif 'linux' in os %}border-orange-200 bg-orange-50 text-orange-600
+                                {% else %}border-gray-200 bg-white text-gray-550{% endif %}">
                                 {{ computer.laptop_os }}
                             </span>
                         </td>
                         <td class="font-mono text-[10px] text-gray-500">{{ computer.serial_number }}</td>
                         <td>
                             <div class="flex flex-col">
-                                <span class="text-white text-xs person-name">{{ computer.full_name }}</span>
-                                <span class="text-[9px] font-mono text-gray-600 uppercase">{{ computer.email }}</span>
+                                <span class="text-gray-800 text-xs person-name font-bold">{{ computer.full_name }}</span>
+                                <span class="text-[9px] font-mono text-gray-500 uppercase">{{ computer.email }}</span>
                             </div>
                         </td>
                         <td>
                             {% set status = computer.status.lower() %}
-                            <span class="status-badge px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border
-                                {% if status == 'active' %}border-green-500/30 bg-green-500/10 text-green-400
-                                {% else %}border-red-500/30 bg-red-500/10 text-red-400{% endif %}">
+                            <span class="status-badge px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border rounded-sm
+                                {% if status == 'active' %}border-green-200 bg-green-50 text-green-600
+                                {% else %}border-red-200 bg-red-50 text-red-600{% endif %}">
                                 {{ computer.status }}
                             </span>
                         </td>
                         <td class="text-right">
                             <div class="flex items-center justify-end gap-2">
-                                <button onclick="toggleFreeze({{ computer.id }}, this)" class="freeze-btn p-1.5 border border-base-600 hover:border-blue-500 hover:text-blue-400 transition-all text-gray-600" title="TOGGLE LOCK">
+                                <button onclick="toggleFreeze({{ computer.id }}, this)" class="freeze-btn p-1.5 border border-gray-200 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50/50 text-gray-400 transition-all rounded" title="Toggle Lock status">
                                     <i class="fas {% if status == 'active' %}fa-snowflake{% else %}fa-bolt animate-pulse{% endif %} text-[10px]"></i>
                                 </button>
-                                <button onclick="confirmDelete({{ computer.id }})" class="p-1.5 border border-base-600 hover:border-red-500 hover:text-red-400 transition-all text-gray-600" title="DECOMMISSION NODE">
+                                <button onclick="confirmDelete({{ computer.id }})" class="p-1.5 border border-gray-200 hover:border-red-500 hover:text-red-650 hover:bg-red-50/50 text-gray-400 transition-all rounded" title="Remove device">
                                     <i class="fas fa-trash-alt text-[10px]"></i>
                                 </button>
                             </div>
@@ -101,19 +101,47 @@
         </div>
     </div>
     {% else %}
-    <div class="content-card border-dashed flex flex-col items-center justify-center py-20 text-gray-600">
-        <i class="fas fa-laptop-code text-4xl mb-4 opacity-20"></i>
-        <h3 class="text-[10px] font-bold uppercase tracking-widest">Node Registry Empty</h3>
-        <p class="text-[9px] uppercase tracking-wider mt-1">No assets found in the current inventory buffer.</p>
+    <div class="content-card border-dashed flex flex-col items-center justify-center py-20 text-gray-500 bg-white">
+        <i class="fas fa-laptop-code text-4xl mb-4 opacity-20 text-accent"></i>
+        <h3 class="text-[10px] font-bold uppercase tracking-widest">Inventory Empty</h3>
+        <p class="text-[9px] uppercase tracking-wider mt-1">No computers found in the current system inventory.</p>
     </div>
     {% endif %}
 
     <div class="flex justify-center">
-        <button onclick="window.location.href='{{ url_for('add_computers') }}'" class="px-8 py-3 bg-base-900 border border-base-600 text-[10px] font-bold text-gray-400 hover:text-white hover:border-blue-500 transition-all uppercase tracking-widest flex items-center gap-3">
-            <i class="fas fa-plus"></i> Register New Endpoint
+        <button onclick="window.location.href='{{ url_for('add_computers') }}'" class="px-8 py-3 bg-accent text-white hover:bg-blue-600 border border-accent text-[10px] font-bold uppercase tracking-widest flex items-center gap-3 rounded shadow-sm">
+            <i class="fas fa-plus"></i> Register New Computer
         </button>
     </div>
 </div>
+
+<style>
+    /* Styling for tables in computer management */
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 11px !important;
+    }
+    th {
+        background: #f8f9fa !important;
+        color: #495057 !important;
+        text-align: left !important;
+        padding: 12px 16px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        border-bottom: 1px solid #dee2e6 !important;
+    }
+    td {
+        padding: 10px 16px !important;
+        color: #212529 !important;
+        border-bottom: 1px solid #e9ecef !important;
+    }
+    tr:hover td {
+        background: rgba(13, 110, 253, 0.04) !important;
+        color: #0d6efd !important;
+    }
+</style>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -142,7 +170,7 @@
             if (matched.length > 0) {
                 matched.forEach(name => {
                     const div = document.createElement('div');
-                    div.className = 'px-4 py-2 cursor-pointer border-b border-base-800 text-xs text-gray-400 hover:bg-base-800 hover:text-white transition-colors uppercase tracking-widest font-bold';
+                    div.className = 'px-4 py-2 cursor-pointer border-b border-gray-100 text-xs text-gray-700 hover:bg-gray-50 hover:text-accent transition-colors uppercase tracking-widest font-bold';
                     div.textContent = name;
                     div.onclick = () => {
                         searchInput.value = name;
@@ -193,14 +221,14 @@
                 const icon = btn.querySelector('i');
                 
                 if (nextStatus === 'frozen') {
-                    icon.className = 'fas fa-bolt animate-pulse text-[10px]';
+                    icon.className = 'fas fa-bolt animate-pulse text-[10px] text-red-500';
                     badge.innerText = 'FROZEN';
-                    badge.className = 'status-badge px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border border-red-500/30 bg-red-500/10 text-red-400';
+                    badge.className = 'status-badge px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border border-red-200 bg-red-50 text-red-600 rounded-sm';
                     btn.title = 'ACTIVATE NODE';
                 } else {
-                    icon.className = 'fas fa-snowflake text-[10px]';
+                    icon.className = 'fas fa-snowflake text-[10px] text-blue-500';
                     badge.innerText = 'ACTIVE';
-                    badge.className = 'status-badge px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border border-green-500/30 bg-green-500/10 text-green-400';
+                    badge.className = 'status-badge px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border border-green-200 bg-green-50 text-green-600 rounded-sm';
                     btn.title = 'LOCK NODE';
                 }
             }
@@ -208,7 +236,7 @@
     }
 
     function confirmDelete(id) {
-        if (confirm('DECOMMISSION NODE: ARE YOU CERTAIN? THIS ACTION CANNOT BE REVERTED.')) {
+        if (confirm('Confirm: Are you sure you want to remove this computer system from the system database?')) {
             fetch(`/delete-laptop/${id}`, { method: 'DELETE' })
             .then(r => r.json())
             .then(data => { if (data.success) location.reload(); });

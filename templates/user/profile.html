@@ -5,7 +5,7 @@
     <div class="flex items-center gap-3 mb-8">
         <i class="fas fa-user-circle text-accent text-2xl"></i>
         <div>
-            <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">User Profile</h1>
+            <h1 class="font-display font-bold text-2xl text-gray-800 tracking-wider uppercase m-0">User Profile</h1>
             <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">Identity & Access Authorization</p>
         </div>
     </div>
@@ -18,14 +18,14 @@
 
         <div class="relative z-10 flex flex-col items-center sm:items-start sm:flex-row gap-8">
             <div class="flex-shrink-0">
-                <div class="w-24 h-24 bg-base-900 border-2 border-accent/30 flex items-center justify-center text-3xl font-bold text-accent uppercase font-display">
+                <div class="w-24 h-24 bg-gray-100 border-2 border-accent/30 flex items-center justify-center text-3xl font-bold text-accent uppercase font-display rounded-sm">
                     {{ user.username|first }}
                 </div>
             </div>
 
             <div class="flex-1 w-full space-y-6">
                 <div>
-                    <h2 class="text-xl font-bold text-white uppercase tracking-tight">{{ user.username }}</h2>
+                    <h2 class="text-xl font-bold text-gray-800 uppercase tracking-tight">{{ user.username }}</h2>
                     <div class="inline-flex items-center gap-1 px-2 py-0.5 mt-2 bg-accent/10 text-accent border border-accent/30 text-[10px] font-bold uppercase tracking-wider rounded">
                         {{ user.role }} Access
                     </div>
@@ -34,17 +34,17 @@
                 <div class="grid grid-cols-1 gap-4 pt-4 border-t border-base-600">
                     <div class="space-y-1">
                         <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Internal ID</label>
-                        <p class="text-sm font-mono text-gray-300">USR-{{ user.id | default('0000', true) }}</p>
+                        <p class="text-sm font-mono text-gray-700">USR-{{ user.id | default('0000', true) }}</p>
                     </div>
                     
                     <div class="space-y-1">
                         <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Email Endpoint</label>
-                        <p class="text-sm font-mono text-gray-300">{{ user.email }}</p>
+                        <p class="text-sm font-mono text-gray-700">{{ user.email }}</p>
                     </div>
 
                     <div class="space-y-1">
                         <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Assigned Role</label>
-                        <p class="text-sm font-mono text-gray-300 uppercase tracking-wider">{{ user.role }} Control</p>
+                        <p class="text-sm font-mono text-gray-700 uppercase tracking-wider">{{ user.role }} Control</p>
                     </div>
 
                     <div class="space-y-1">
@@ -57,7 +57,7 @@
                 </div>
 
                 <div class="pt-6">
-                    <button class="px-6 py-2 border border-base-600 bg-base-800 text-gray-400 font-bold uppercase tracking-widest text-[10px] hover:bg-base-700 hover:text-white transition-all">
+                    <button class="px-6 py-2 border border-gray-200 bg-white text-gray-600 font-bold uppercase tracking-widest text-[10px] hover:bg-gray-50 hover:text-gray-800 transition-all rounded">
                         Update Credentials
                     </button>
                 </div>

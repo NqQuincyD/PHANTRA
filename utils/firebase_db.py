@@ -3,7 +3,7 @@ from datetime import datetime
 import google.cloud.firestore
 
 class FirebaseDB:
-    """Helper class to manage Firestore operations for PHANTRA."""
+    """Helper class to manage Firestore operations for the Digital Footprint Adjudication System."""
 
     @staticmethod
     def save_activity(user_id, activity_type, details):

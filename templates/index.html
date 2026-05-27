@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" class="dark bg-[#050505] text-[#e0e0e0]">
+<html lang="en" class="bg-[#f4f6f9] text-[#2c3e50]">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PHANTRA Security System</title>
+    <title>Digital Footprint Adjudication System</title>
     <!-- Google Fonts: Space Grotesk for headings, JetBrains Mono for data/UI -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,18 +21,15 @@
                     },
                     colors: {
                         base: {
-                            900: '#050505',
-                            800: '#111111',
-                            700: '#1a1a1a',
-                            600: '#333333',
+                            900: '#ffffff',
+                            800: '#f8f9fa',
+                            700: '#e9ecef',
+                            600: '#dee2e6',
                         },
                         accent: {
-                            DEFAULT: '#00ff41',
-                            muted: 'rgba(0, 255, 65, 0.15)',
+                            DEFAULT: '#0d6efd',
+                            muted: 'rgba(13, 110, 253, 0.08)',
                         }
-                    },
-                    backgroundImage: {
-                        'grid-pattern': "linear-gradient(to right, #1a1a1a 1px, transparent 1px), linear-gradient(to bottom, #1a1a1a 1px, transparent 1px)"
                     }
                 }
             }
@@ -43,37 +40,27 @@
     <style>
         body {
             font-family: 'JetBrains Mono', monospace;
-            /* Grid background effect */
             background-size: 50px 50px;
             background-image: 
-                linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+                linear-gradient(to right, rgba(0,0,0,0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0,0,0,0.02) 1px, transparent 1px);
             background-position: center center;
+            background-color: #f4f6f9;
         }
 
-        /* Glitch effect on hover for the accent title */
-        .glitch-hover:hover {
-            animation: glitch-anim 0.2s cubic-bezier(.25, .46, .45, .94) both infinite;
-            color: #fff;
-            text-shadow: 2px 0 #00ff41, -2px 0 #ff003c;
-        }
-
-        @keyframes glitch-anim {
-            0% { transform: translate(0) }
-            20% { transform: translate(-2px, 1px) }
-            40% { transform: translate(-1px, -1px) }
-            60% { transform: translate(2px, 1px) }
-            80% { transform: translate(1px, -1px) }
-            100% { transform: translate(0) }
+        .title-hover:hover {
+            color: #0d6efd;
+            transition: color 0.3s ease;
         }
 
         /* Utilitarian Button */
         .btn-utilitarian {
             position: relative;
-            background: transparent;
-            color: #e0e0e0;
-            border: 1px solid #333;
+            background: #ffffff;
+            color: #495057;
+            border: 1px solid #dee2e6;
             transition: all 0.2s ease;
+            border-radius: 4px;
         }
         
         .btn-utilitarian::before {
@@ -83,95 +70,82 @@
             width: 4px; height: 100%;
             background-color: transparent;
             transition: background-color 0.2s ease;
+            border-top-left-radius: 4px;
+            border-bottom-left-radius: 4px;
         }
 
         .btn-utilitarian:hover, .btn-utilitarian:focus-visible {
-            background-color: rgba(255, 255, 255, 0.05);
-            border-color: #e0e0e0;
-            color: #fff;
+            background-color: #f8f9fa;
+            border-color: #0d6efd;
+            color: #0d6efd;
             outline: none;
         }
 
         .btn-accent {
-            color: #00ff41;
-            border-color: #00ff41;
+            color: #0d6efd;
+            border-color: #0d6efd;
         }
 
         .btn-accent::before {
-            background-color: #00ff41;
+            background-color: #0d6efd;
         }
         
         .btn-accent:hover, .btn-accent:focus-visible {
-            background-color: rgba(0, 255, 65, 0.1);
-            border-color: #00ff41;
-            color: #00ff41;
-            box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+            background-color: rgba(13, 110, 253, 0.08);
+            border-color: #0d6efd;
+            color: #0d6efd;
+            box-shadow: 0 0 10px rgba(13, 110, 253, 0.1);
         }
-
-        /* Screen reader only utility is built into tailwind (sr-only) */
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center p-4 selection:bg-accent selection:text-base-900">
+<body class="min-h-screen flex flex-col items-center justify-center p-4 selection:bg-accent selection:text-white bg-[#f4f6f9]">
     
     <main class="w-full max-w-2xl relative">
         <!-- Structural corner accents -->
-        <div class="absolute -top-4 -left-4 w-8 h-8 border-t-2 border-l-2 border-base-600" aria-hidden="true"></div>
-        <div class="absolute -top-4 -right-4 w-8 h-8 border-t-2 border-r-2 border-base-600" aria-hidden="true"></div>
-        <div class="absolute -bottom-4 -left-4 w-8 h-8 border-b-2 border-l-2 border-base-600" aria-hidden="true"></div>
-        <div class="absolute -bottom-4 -right-4 w-8 h-8 border-b-2 border-r-2 border-base-600" aria-hidden="true"></div>
+        <div class="absolute -top-4 -left-4 w-8 h-8 border-t-2 border-l-2 border-gray-300" aria-hidden="true"></div>
+        <div class="absolute -top-4 -right-4 w-8 h-8 border-t-2 border-r-2 border-gray-300" aria-hidden="true"></div>
+        <div class="absolute -bottom-4 -left-4 w-8 h-8 border-b-2 border-l-2 border-gray-300" aria-hidden="true"></div>
+        <div class="absolute -bottom-4 -right-4 w-8 h-8 border-b-2 border-r-2 border-gray-300" aria-hidden="true"></div>
 
-        <article class="bg-base-900 border border-base-600 p-8 sm:p-12 text-center relative z-10 shadow-2xl">
-            <!-- Decorative Terminal Header -->
-            <header class="absolute top-0 left-0 w-full flex justify-between px-4 py-2 border-b border-base-600 text-[10px] text-gray-500 tracking-widest uppercase">
-                <span>SYS_INIT</span>
-                <span>SEC_LEVEL: ALPHA</span>
-                <span>V. 2.0.4</span>
-            </header>
-
-            <div class="mt-8 mb-6 inline-flex items-center justify-center w-16 h-16 border border-accent bg-accent-muted text-accent">
+        <article class="bg-white border border-gray-200 p-8 sm:p-12 text-center relative z-10 shadow-lg rounded-lg">
+            <div class="mt-2 mb-6 inline-flex items-center justify-center w-16 h-16 border border-accent bg-accent-muted text-accent rounded-full">
                 <i class="fas fa-shield-halved text-2xl" aria-hidden="true"></i>
             </div>
             
-            <h1 class="font-display text-4xl sm:text-6xl font-bold tracking-tight text-white mb-2 glitch-hover transition-colors duration-200">
-                PHANTRA
+            <h1 class="font-display text-xl sm:text-2xl font-bold tracking-tight text-gray-800 mb-3 title-hover transition-colors duration-200 uppercase">
+                Machine Learning & Cyber Threat Intelligence
             </h1>
-            <p class="text-sm tracking-[0.2em] text-gray-400 uppercase mb-12">
-                Advanced Threat Monitoring
+            <p class="text-xs tracking-[0.1em] text-gray-500 uppercase mb-8 max-w-md mx-auto">
+                For Secure Digital Footprint Adjudication
             </p>
 
             <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 {% if current_user.is_authenticated %}
                 <a href="{{ url_for('user.home') }}" 
-                   class="btn-utilitarian btn-accent w-full sm:w-auto px-12 py-4 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-3"
-                   aria-label="Enter PHANTRA Command Center">
-                    <span>ENTER COMMAND CENTER</span>
-                    <i class="fas fa-shield-halved" aria-hidden="true"></i>
+                   class="btn-utilitarian btn-accent w-full sm:w-auto px-10 py-3.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-3"
+                   aria-label="Enter Digital Footprint Adjudication Dashboard">
+                    <span>Enter Dashboard</span>
+                    <i class="fas fa-arrow-right" aria-hidden="true"></i>
                 </a>
                 <a href="{{ url_for('auth.logout') }}" 
-                   class="text-[10px] font-bold text-gray-600 hover:text-accent transition-colors uppercase tracking-widest mt-4 sm:mt-0 ml-0 sm:ml-4">
-                    Terminate Session
+                   class="text-[10px] font-bold text-gray-400 hover:text-accent transition-colors uppercase tracking-widest mt-4 sm:mt-0 ml-0 sm:ml-4">
+                    Sign Out
                 </a>
                 {% else %}
                 <a href="{{ url_for('auth.login') }}" 
-                   class="btn-utilitarian btn-accent w-full sm:w-auto px-8 py-3 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-3"
-                   aria-label="Login to PHANTRA system">
-                    <span>SYS.LOGIN</span>
-                    <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                   class="btn-utilitarian btn-accent w-full sm:w-auto px-10 py-3.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-3"
+                   aria-label="Sign in to system">
+                    <span>Sign In</span>
+                    <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
                 </a>
                 <a href="{{ url_for('auth.register') }}" 
-                   class="btn-utilitarian w-full sm:w-auto px-8 py-3 text-sm font-bold uppercase tracking-wider flex items-center justify-center gap-3"
-                   aria-label="Register new agent">
-                    <span>INIT.AGENT</span>
-                    <i class="fas fa-terminal" aria-hidden="true"></i>
+                   class="btn-utilitarian w-full sm:w-auto px-10 py-3.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-3"
+                   aria-label="Register new account">
+                    <span>Create Account</span>
+                    <i class="fas fa-user-plus" aria-hidden="true"></i>
                 </a>
                 {% endif %}
             </div>
-
-            <!-- Decorative data stream footer -->
-            <footer class="mt-12 pt-6 border-t border-base-600 border-dashed text-left text-xs text-gray-600 flex justify-between">
-                <span>STATUS: <span class="text-accent animate-pulse">ONLINE</span></span>
-                <span>NODE_ID: {{ range(1000, 9999) | random }}</span>
-            </footer>
         </article>
     </main>
 

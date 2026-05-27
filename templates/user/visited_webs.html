@@ -4,7 +4,7 @@
     <div class="flex items-center gap-3 mb-4">
         <i class="fas fa-history text-blue-500 text-2xl"></i>
         <div>
-            <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">Browsing History</h1>
+            <h1 class="font-display font-bold text-2xl text-gray-800 tracking-wider uppercase m-0">Websites Visited</h1>
             <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">Network Activity Extraction & Audit</p>
         </div>
     </div>
@@ -13,7 +13,7 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="p-4 rounded border {% if category == 'success' %}bg-accent/10 border-accent/30 text-accent{% elif category == 'error' %}bg-alert/10 border-alert/30 text-alert{% else %}bg-blue-500/10 border-blue-500/30 text-blue-500{% endif %} text-xs font-bold uppercase tracking-wider">
+                    <div class="p-4 rounded border {% if category == 'success' %}bg-accent/10 border-accent/30 text-accent{% elif category == 'error' %}bg-alert/10 border-alert/30 text-alert{% else %}bg-blue-50 border-blue-200 text-blue-600{% endif %} text-xs font-bold uppercase tracking-wider">
                         {{ message }}
                     </div>
                 {% endfor %}
@@ -21,46 +21,46 @@
         {% endwith %}
 
         {% if current_user.role == 'Admin' and all_users %}
-        <div class="content-card bg-base-900/50 flex flex-wrap items-center gap-4">
+        <div class="content-card bg-white flex flex-wrap items-center gap-4 py-3">
             <label class="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
                 <i class="fas fa-user-shield text-blue-500"></i> Monitor Target:
             </label>
-            <select onchange="window.location.href='{{ url_for('user.visited_webs') }}?username=' + this.value" class="bg-base-900 border border-base-600 text-white text-xs px-3 py-2 focus:border-blue-500 focus:outline-none transition-colors font-mono">
+            <select onchange="window.location.href='{{ url_for('user.visited_webs') }}?username=' + this.value" class="select-field text-xs px-3 py-2 bg-white">
                 <option value="">-- Select User --</option>
                 {% for u in all_users %}
                 <option value="{{ u.username }}" {% if u.username == username %}selected{% endif %}>{{ u.username }} ({{ u.email }})</option>
                 {% endfor %}
             </select>
             <div class="ml-auto text-[10px] text-gray-500 uppercase tracking-widest">
-                Active extraction target: <span class="text-white font-bold">{{ username if username else 'NONE' }}</span>
+                Active extraction target: <span class="text-accent font-bold">{{ username if username else 'NONE' }}</span>
             </div>
         </div>
         {% endif %}
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            <div class="lg:col-span-1 content-card space-y-4">
-                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-base-600 pb-2">Control Panel</h3>
+            <div class="lg:col-span-1 content-card space-y-4 bg-white">
+                <h3 class="text-xs font-bold text-gray-600 uppercase tracking-widest border-b border-gray-250 pb-2">Control Panel</h3>
                 
                 <form method="POST" class="space-y-4">
                     <div class="space-y-2">
                         <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Target Username</label>
-                        <input type="text" name="username" placeholder="sysadmin_01" class="w-full bg-base-900 border border-base-600 text-white text-xs px-3 py-2 focus:border-blue-500 focus:outline-none font-mono" value="{{ username if username else '' }}" required>
+                        <input type="text" name="username" placeholder="sysadmin_01" class="input-field w-full text-xs px-3 py-2 font-mono" value="{{ username if username else '' }}" required>
                     </div>
                     
                     <div class="flex items-center gap-2">
-                        <input type="checkbox" name="clear_existing" id="clear_existing" class="bg-base-900 border-base-600 rounded text-blue-500 focus:ring-blue-500">
+                        <input type="checkbox" name="clear_existing" id="clear_existing" class="h-4 w-4 border-gray-300 rounded text-accent focus:ring-1 focus:ring-accent focus:ring-offset-0 cursor-pointer">
                         <label for="clear_existing" class="text-[10px] text-gray-500 uppercase tracking-widest cursor-pointer">Clear existing cache</label>
                     </div>
 
-                    <button type="submit" class="w-full py-3 px-4 border border-blue-500/30 bg-blue-500/10 text-blue-500 font-bold uppercase tracking-wider text-[10px] hover:bg-blue-500 hover:text-base-900 transition-colors flex items-center justify-center gap-2">
+                    <button type="submit" class="w-full py-3 px-4 bg-accent text-white border border-accent hover:bg-blue-600 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2 rounded shadow-sm">
                         <i class="fas fa-bolt"></i> Execute Extraction
                     </button>
                 </form>
 
-                <div class="pt-4 border-t border-base-600 space-y-4">
+                <div class="pt-4 border-t border-gray-200 space-y-4">
                     <div class="space-y-2">
                         <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Auto-refresh Cycle</label>
-                        <select id="refresh-interval" class="w-full bg-base-900 border border-base-600 text-white text-xs px-3 py-2 focus:border-blue-500 focus:outline-none font-mono">
+                        <select id="refresh-interval" class="select-field w-full text-xs px-3 py-2 font-mono">
                             <option value="0">Off</option>
                             <option value="30">30 Seconds</option>
                             <option value="60">1 Minute</option>
@@ -71,12 +71,12 @@
                 </div>
             </div>
 
-            <div class="lg:col-span-3 content-card !p-0 flex flex-col">
+            <div class="lg:col-span-3 content-card !p-0 flex flex-col bg-white">
                 {% if histories %}
-                <div class="p-4 border-b border-base-600 flex flex-wrap gap-4 items-center bg-base-900/50">
+                <div class="p-4 border-b border-gray-200 flex flex-wrap gap-4 items-center bg-gray-50">
                     <div class="flex items-center gap-2">
                         <label class="text-[10px] font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Filter Browser:</label>
-                        <select id="browser-filter" onchange="filterTable()" class="bg-base-900 border border-base-600 text-white text-[10px] px-2 py-1 focus:border-blue-500 focus:outline-none font-mono">
+                        <select id="browser-filter" onchange="filterTable()" class="select-field text-[10px] px-2 py-1 bg-white">
                             <option value="all">All Platforms</option>
                             <option value="chrome">Chrome</option>
                             <option value="firefox">Firefox</option>
@@ -86,53 +86,53 @@
                         </select>
                     </div>
                     <div class="flex-1 min-w-[200px] relative">
-                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
-                        <input type="text" id="search" placeholder="Search telemetry records..." onkeyup="filterTable()" class="w-full bg-base-900 border border-base-600 text-white text-[10px] pl-8 pr-3 py-1.5 focus:border-blue-500 focus:outline-none font-mono uppercase tracking-wider">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                        <input type="text" id="search" placeholder="Search telemetry records..." onkeyup="filterTable()" class="input-field w-full text-[10px] pl-8 pr-3 py-1.5 font-mono uppercase tracking-wider">
                     </div>
                 </div>
 
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse" id="history-table">
                         <thead>
-                            <tr class="border-b border-base-600 bg-base-900/50">
-                                <th class="p-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Platform</th>
-                                <th class="p-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Telemetry Title</th>
-                                <th class="p-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Destination URL</th>
-                                <th class="p-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider text-center">Hits</th>
-                                <th class="p-4 text-[10px] font-semibold text-gray-400 uppercase tracking-wider text-right">Last Visit</th>
+                            <tr class="border-b border-gray-200 bg-gray-50">
+                                <th class="p-4 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Platform</th>
+                                <th class="p-4 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Telemetry Title</th>
+                                <th class="p-4 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Destination URL</th>
+                                <th class="p-4 text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-center">Hits</th>
+                                <th class="p-4 text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-right">Last Visit</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-base-600 text-[11px] font-mono">
+                        <tbody class="divide-y divide-gray-100 text-[11px] font-mono">
                             {% for history in histories %}
-                            <tr class="hover:bg-base-800 transition-colors">
+                            <tr class="hover:bg-blue-50/30 transition-colors">
                                 <td class="p-4 whitespace-nowrap">
                                     {% if 'chrome' in history.browser.lower() %}
-                                        <span class="text-blue-400 font-bold uppercase"><i class="fab fa-chrome mr-1"></i> Chrome</span>
+                                        <span class="text-blue-600 font-bold uppercase"><i class="fab fa-chrome mr-1"></i> Chrome</span>
                                     {% elif 'firefox' in history.browser.lower() %}
-                                        <span class="text-orange-500 font-bold uppercase"><i class="fab fa-firefox mr-1"></i> Firefox</span>
+                                        <span class="text-orange-600 font-bold uppercase"><i class="fab fa-firefox mr-1"></i> Firefox</span>
                                     {% elif 'edge' in history.browser.lower() %}
-                                        <span class="text-blue-500 font-bold uppercase"><i class="fab fa-edge mr-1"></i> Edge</span>
+                                        <span class="text-blue-600 font-bold uppercase"><i class="fab fa-edge mr-1"></i> Edge</span>
                                     {% elif 'safari' in history.browser.lower() %}
-                                        <span class="text-gray-200 font-bold uppercase"><i class="fab fa-safari mr-1"></i> Safari</span>
+                                        <span class="text-gray-700 font-bold uppercase"><i class="fab fa-safari mr-1"></i> Safari</span>
                                     {% elif 'opera' in history.browser.lower() %}
-                                        <span class="text-red-500 font-bold uppercase"><i class="fab fa-opera mr-1"></i> Opera</span>
+                                        <span class="text-red-650 font-bold uppercase"><i class="fab fa-opera mr-1"></i> Opera</span>
                                     {% else %}
                                         <span class="text-gray-500 uppercase">{{ history.browser }}</span>
                                     {% endif %}
                                 </td>
-                                <td class="p-4 text-gray-200 font-sans font-bold line-clamp-1 max-w-xs">{{ history.title }}</td>
+                                <td class="p-4 text-gray-800 font-sans font-bold line-clamp-1 max-w-xs" title="{{ history.title }}">{{ history.title }}</td>
                                 <td class="p-4 max-w-xs truncate">
-                                    <a href="{{ history.url }}" target="_blank" class="text-blue-500 hover:text-white transition-colors" title="{{ history.url }}">{{ history.url }}</a>
+                                    <a href="{{ history.url }}" target="_blank" class="text-blue-600 hover:text-blue-800 transition-colors font-medium" title="{{ history.url }}">{{ history.url }}</a>
                                 </td>
-                                <td class="p-4 text-center text-accent font-bold">{{ history.visit_count }}</td>
-                                <td class="p-4 text-right text-gray-500 whitespace-nowrap">{{ history.last_visit_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                <td class="p-4 text-center text-accent font-black text-xs">{{ history.visit_count }}</td>
+                                <td class="p-4 text-right text-gray-550 whitespace-nowrap">{{ history.last_visit_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
                 {% else %}
-                <div class="p-12 flex flex-col items-center justify-center text-gray-600 text-center space-y-4">
+                <div class="p-12 flex flex-col items-center justify-center text-gray-500 text-center space-y-4">
                     <i class="fas fa-history text-5xl opacity-20"></i>
                     <div>
                         <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest">No Extraction Data</h3>
@@ -158,8 +158,8 @@
             
             const browserMatch = browserFilter === 'all' || browser.includes(browserFilter);
             const searchMatch = searchQuery === '' || 
-                              title.includes(searchQuery) || 
-                              url.includes(searchQuery);
+                               title.includes(searchQuery) || 
+                               url.includes(searchQuery);
             
             row.style.display = (browserMatch && searchMatch) ? '' : 'none';
         });

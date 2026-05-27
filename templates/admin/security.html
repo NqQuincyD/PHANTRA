@@ -5,29 +5,29 @@
     <div class="flex items-center gap-3 mb-4">
         <i class="fas fa-shield-alt text-alert text-2xl"></i>
         <div>
-            <h1 class="font-display font-bold text-2xl text-white tracking-wider uppercase m-0">Security Console</h1>
+            <h1 class="font-display font-bold text-2xl text-gray-800 tracking-wider uppercase m-0">Security Console</h1>
             <p class="text-xs text-gray-500 uppercase tracking-widest mt-1">Authentication & Access Logs</p>
         </div>
     </div>
 
-    <div class="content-card !p-0 overflow-hidden">
+    <div class="content-card !p-0 overflow-hidden bg-white border border-gray-200 rounded">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="border-b border-base-600 bg-base-900/50">
-                        <th class="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">User / Email</th>
-                        <th class="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Action</th>
-                        <th class="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest font-mono">IP Address</th>
-                        <th class="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Details</th>
-                        <th class="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Timestamp</th>
-                        <th class="p-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Risk</th>
+                    <tr class="border-b border-gray-200 bg-gray-50">
+                        <th class="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">User / Email</th>
+                        <th class="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Action</th>
+                        <th class="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest font-mono">IP Address</th>
+                        <th class="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Details</th>
+                        <th class="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Timestamp</th>
+                        <th class="p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest text-right">Risk</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-base-600 text-sm">
+                <tbody class="divide-y divide-gray-100 text-sm">
                     {% for log in auth_logs %}
-                    <tr class="hover:bg-base-800 transition-colors {% if 'failed' in log.action %}bg-alert/5 hover:bg-alert/10{% endif %}">
+                    <tr class="hover:bg-blue-50/30 transition-colors {% if 'failed' in log.action %}bg-alert/5 hover:bg-alert/10{% endif %}">
                         <td class="p-4">
-                            <span class="font-bold text-white uppercase tracking-tight">{{ log.email or (log.user.username if log.user else 'Unknown') }}</span>
+                            <span class="font-bold text-gray-800 uppercase tracking-tight">{{ log.email or (log.user.username if log.user else 'Unknown') }}</span>
                         </td>
                         <td class="p-4">
                             {% if 'failed' in log.action %}
@@ -44,14 +44,14 @@
                             </span>
                             {% endif %}
                         </td>
-                        <td class="p-4 text-[11px] font-mono text-gray-400">{{ log.ip_address }}</td>
-                        <td class="p-4 text-gray-300 max-w-xs truncate text-xs">{{ log.details or '-' }}</td>
+                        <td class="p-4 text-[11px] font-mono text-gray-500">{{ log.ip_address }}</td>
+                        <td class="p-4 text-gray-650 max-w-xs truncate text-xs">{{ log.details or '-' }}</td>
                         <td class="p-4 text-[11px] font-mono text-gray-500">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
                         <td class="p-4 text-right">
                             {% if 'failed' in log.action %}
                             <span class="text-alert font-bold uppercase tracking-widest text-[10px] animate-pulse">Intrusion</span>
                             {% else %}
-                            <span class="text-gray-600 font-bold uppercase tracking-widest text-[10px]">Normal</span>
+                            <span class="text-gray-550 font-bold uppercase tracking-widest text-[10px]">Normal</span>
                             {% endif %}
                         </td>
                     </tr>
