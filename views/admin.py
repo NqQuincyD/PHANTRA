@@ -125,10 +125,81 @@ def reports_analytics():
      return render_template('admin/reports.html')
 
 
-# @adm_bp.route('/model-evaluation')
-# @login_required
-# def model_evaluation():
-#     return render_template('admin/model_evaluation.html')
+@adm_bp.route('/model-evaluation')
+@login_required
+def model_evaluation():
+    if current_user.role != 'Admin':
+        flash('Access denied', 'danger')
+        return redirect(url_for('auth.login'))
+
+    from views.user import get_ml_df
+    
+    try:
+        df = get_ml_df()
+        total_records = len(df)
+        total_anomalies = int(df['is_anomaly'].sum()) if 'is_anomaly' in df.columns else 0
+        anomaly_rate = round((total_anomalies / total_records) * 100, 2) if total_records > 0 else 0.0
+        high_critical_count = int(df[df['risk_level'].isin(['High', 'Critical'])].shape[0]) if 'risk_level' in df.columns else 0
+        avg_anomaly_score = round(df['anomaly_score'].mean(), 4) if 'anomaly_score' in df.columns and total_records > 0 else 0.0
+        
+        # Calculate categories counts
+        target_categories = ['anonymous', 'betting', 'hacking', 'money', 'trading', 'porn', 'social', 'video', 'shopping', 'job', 'forum', 'cloud']
+        category_counts = {}
+        for cat in target_categories:
+            col = f'is_{cat}'
+            if col in df.columns:
+                category_counts[cat] = int(df[col].sum())
+            else:
+                category_counts[cat] = 0
+                
+        # Risk levels distribution
+        risk_dist = {}
+        if 'risk_level' in df.columns:
+            for rl, count in df['risk_level'].value_counts().items():
+                risk_dist[str(rl)] = int(count)
+                
+        # Browser breakdown
+        browser_dist = {}
+        if 'Browser' in df.columns:
+            for br, count in df['Browser'].value_counts().items():
+                browser_dist[str(br)] = int(count)
+    except Exception as e:
+        print(f"Error compiling live metrics: {e}")
+        total_records = 0
+        total_anomalies = 0
+        anomaly_rate = 0.0
+        high_critical_count = 0
+        avg_anomaly_score = 0.0
+        category_counts = {}
+        risk_dist = {}
+        browser_dist = {}
+
+    return render_template(
+        'admin/model_evaluation.html',
+        total_records=total_records,
+        total_anomalies=total_anomalies,
+        anomaly_rate=anomaly_rate,
+        high_critical_count=high_critical_count,
+        avg_anomaly_score=avg_anomaly_score,
+        category_counts=category_counts,
+        risk_dist=risk_dist,
+        browser_dist=browser_dist
+    )
+
+@adm_bp.route('/model-evaluation/retrain', methods=['POST'])
+@login_required
+def retrain_model():
+    if current_user.role != 'Admin':
+        return jsonify({'status': 'error', 'message': 'Access denied'}), 403
+        
+    from views.user import update_ml_pipeline
+    try:
+        update_ml_pipeline()
+        flash('ML Anomaly Detection Pipeline successfully updated and retrained on current browser history.', 'success')
+        return redirect(url_for('admin.model_evaluation'))
+    except Exception as e:
+        flash(f'Error updating ML pipeline: {str(e)}', 'danger')
+        return redirect(url_for('admin.model_evaluation'))
 
 @adm_bp.route('/monitoring-hub', methods=['GET', 'POST'])
 @login_required

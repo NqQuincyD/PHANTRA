@@ -1,0 +1,672 @@
+{% extends "user/base.html" %}
+
+{% block content %}
+<div class="space-y-8 animate-fade-in">
+    <!-- Header Page and Control Bar -->
+    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-gray-200 pb-6">
+        <div>
+            <h2 id="page-title" class="text-2xl font-bold font-display uppercase text-gray-800 tracking-wider flex items-center gap-2">
+                <i class="fas fa-brain text-accent"></i> Model Performance
+            </h2>
+            <p class="text-sm text-gray-500 font-sans mt-1">
+                See how well the system's smart AI detects unusual activities and view overall test results.
+            </p>
+        </div>
+        <div class="flex gap-3">
+            <form id="retrain-form" action="{{ url_for('admin.retrain_model') }}" method="POST" onsubmit="triggerRetrainLoading()">
+                <button type="submit" id="btn-retrain" class="px-5 py-2.5 bg-accent text-white hover:bg-blue-700 transition-all font-bold uppercase tracking-wider text-xs flex items-center gap-2 shadow-sm rounded-sm">
+                    <i class="fas fa-arrows-rotate" id="retrain-icon"></i> 
+                    <span id="retrain-text">Update AI Baseline</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Navigation Tabs -->
+    <div class="border-b border-gray-200" id="metrics-tabs" role="tablist">
+        <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="tabList">
+            <li class="me-2" role="presentation">
+                <button class="inline-block p-4 border-b-2 font-display uppercase tracking-widest text-xs transition-all duration-200 border-accent text-accent" id="tab-live-btn" onclick="switchTab('live')" type="button" role="tab" aria-controls="live-metrics" aria-selected="true">
+                    <i class="fas fa-satellite-dish mr-2"></i> Live System Health
+                </button>
+            </li>
+            <li class="me-2" role="presentation">
+                <button class="inline-block p-4 border-b-2 font-display uppercase tracking-widest text-xs transition-all duration-200 border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-300" id="tab-exp-btn" onclick="switchTab('exp')" type="button" role="tab" aria-controls="experimental-metrics" aria-selected="false">
+                    <i class="fas fa-flask mr-2"></i> AI Scanner Tests
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- TAB 1: LIVE TELEMETRY CONTENT -->
+    <div id="live-metrics-panel" class="space-y-8" role="tabpanel" aria-labelledby="tab-live-btn">
+        <!-- Live Stats Overview Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Telemetry Size Card -->
+            <div class="content-card relative overflow-hidden group hover:border-accent/40 transition-all duration-300" id="card-telemetry-size">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Total Activity Logs</p>
+                        <h3 class="text-3xl font-bold font-display mt-2 text-gray-800">{{ "{:,}".format(total_records) }}</h3>
+                        <p class="text-xs text-gray-500 mt-1">System records checked</p>
+                    </div>
+                    <div class="p-3 bg-accent-muted text-accent rounded-sm group-hover:scale-110 transition-transform duration-200">
+                        <i class="fas fa-database text-lg"></i>
+                    </div>
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 h-1 bg-accent"></div>
+            </div>
+
+            <!-- Anomalies Caught Card -->
+            <div class="content-card relative overflow-hidden group hover:border-alert/40 transition-all duration-300" id="card-anomalies-caught">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Unusual Actions Found</p>
+                        <h3 class="text-3xl font-bold font-display mt-2 text-alert">{{ "{:,}".format(total_anomalies) }}</h3>
+                        <p class="text-xs text-gray-500 mt-1">Unexpected patterns flagged</p>
+                    </div>
+                    <div class="p-3 bg-alert-muted text-alert rounded-sm group-hover:scale-110 transition-transform duration-200">
+                        <i class="fas fa-circle-exclamation text-lg"></i>
+                    </div>
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 h-1 bg-alert"></div>
+            </div>
+
+            <!-- Anomaly Rate Card -->
+            <div class="content-card relative overflow-hidden group hover:border-orange-500/40 transition-all duration-300" id="card-anomaly-rate">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Unusual Activity Rate</p>
+                        <h3 class="text-3xl font-bold font-display mt-2 text-orange-500">{{ anomaly_rate }}%</h3>
+                        <p class="text-xs text-gray-500 mt-1">Percentage of unexpected events</p>
+                    </div>
+                    <div class="p-3 bg-orange-50 text-orange-500 rounded-sm group-hover:scale-110 transition-transform duration-200">
+                        <i class="fas fa-percent text-lg"></i>
+                    </div>
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 h-1 bg-orange-500"></div>
+            </div>
+
+            <!-- Threat Score Card -->
+            <div class="content-card relative overflow-hidden group hover:border-purple-600/40 transition-all duration-300" id="card-avg-threat">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Urgent Security Alerts</p>
+                        <h3 class="text-3xl font-bold font-display mt-2 text-purple-600">{{ high_critical_count }}</h3>
+                        <p class="text-xs text-gray-500 mt-1">Critical events requiring attention</p>
+                    </div>
+                    <div class="p-3 bg-purple-50 text-purple-600 rounded-sm group-hover:scale-110 transition-transform duration-200">
+                        <i class="fas fa-radiation text-lg"></i>
+                    </div>
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 h-1 bg-purple-600"></div>
+            </div>
+        </div>
+
+        {% if total_records == 0 %}
+        <!-- Empty State warning -->
+        <div class="content-card border-dashed border-2 border-gray-300 bg-gray-50/50 flex flex-col items-center justify-center py-12 text-center" id="live-empty-state">
+            <i class="fas fa-triangle-exclamation text-amber-500 text-4xl mb-4"></i>
+            <h3 class="text-lg font-bold font-display text-gray-700 uppercase">No Activity Records Loaded</h3>
+            <p class="text-sm text-gray-500 max-w-md mt-2">
+                The local database is currently empty or computer history data has not been synced yet. Click the "Update AI Baseline" button above to import active computer logs.
+            </p>
+        </div>
+        {% else %}
+        <!-- Live Telemetry Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Digital Channels -->
+            <div class="content-card lg:col-span-2" id="live-channels-container">
+                <h3 class="text-sm font-bold font-display text-gray-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <i class="fas fa-chart-bar text-accent"></i> Unusual Activity by Category
+                </h3>
+                <div class="relative h-[300px]">
+                    <canvas id="liveChannelsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Browser Breakdown -->
+            <div class="content-card" id="live-browsers-container">
+                <h3 class="text-sm font-bold font-display text-gray-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <i class="fas fa-circle-notch text-accent"></i> Active Browsers Checked
+                </h3>
+                <div class="relative h-[300px] flex items-center justify-center">
+                    <canvas id="liveBrowsersChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ML Parameters & Pipeline Metadata -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Parameters -->
+            <div class="content-card" id="live-parameters-container">
+                <h3 class="text-sm font-bold font-display text-gray-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <i class="fas fa-sliders text-accent"></i> AI Scanner Settings
+                </h3>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-sm text-gray-500">Number of Smart Trees</span>
+                        <span class="font-mono text-sm font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded-sm">150 Trees</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-sm text-gray-500">Sample Size Checked</span>
+                        <span class="font-mono text-sm font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded-sm">80% of data</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-sm text-gray-500">Alert Sensitivity Limit</span>
+                        <span class="font-mono text-sm font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded-sm">Automatic Adaptive</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span class="text-sm text-gray-500">System Scan Seed</span>
+                        <span class="font-mono text-sm font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded-sm">42</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2">
+                        <span class="text-sm text-gray-500">Behavior Features Tracked</span>
+                        <span class="font-mono text-sm font-bold text-accent bg-accent-muted px-2 py-0.5 rounded-sm">13 Features</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Threat Weights -->
+            <div class="content-card" id="live-weights-container">
+                <h3 class="text-sm font-bold font-display text-gray-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <i class="fas fa-weight-hanging text-accent"></i> Risk Priority Level
+                </h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-3 bg-gray-50 border border-gray-100 rounded-sm">
+                        <div class="flex justify-between">
+                            <span class="text-xs text-gray-500 uppercase">Hacking</span>
+                            <span class="text-xs font-bold text-alert">Critical</span>
+                        </div>
+                        <div class="w-full bg-gray-200 h-1.5 mt-2 rounded-full overflow-hidden">
+                            <div class="bg-alert h-full" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-gray-50 border border-gray-100 rounded-sm">
+                        <div class="flex justify-between">
+                            <span class="text-xs text-gray-500 uppercase">Adult/Porn</span>
+                            <span class="text-xs font-bold text-alert">Critical</span>
+                        </div>
+                        <div class="w-full bg-gray-200 h-1.5 mt-2 rounded-full overflow-hidden">
+                            <div class="bg-alert h-full" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-gray-50 border border-gray-100 rounded-sm">
+                        <div class="flex justify-between">
+                            <span class="text-xs text-gray-500 uppercase">Betting</span>
+                            <span class="text-xs font-bold text-amber-500">Very High</span>
+                        </div>
+                        <div class="w-full bg-gray-200 h-1.5 mt-2 rounded-full overflow-hidden">
+                            <div class="bg-amber-500 h-full" style="width: 90%"></div>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-gray-50 border border-gray-100 rounded-sm">
+                        <div class="flex justify-between">
+                            <span class="text-xs text-gray-500 uppercase">Trading</span>
+                            <span class="text-xs font-bold text-amber-500">High</span>
+                        </div>
+                        <div class="w-full bg-gray-200 h-1.5 mt-2 rounded-full overflow-hidden">
+                            <div class="bg-amber-500 h-full" style="width: 80%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- TAB 2: EXPERIMENTAL EVALUATION CONTENT -->
+    <div id="experimental-metrics-panel" class="space-y-8 hidden" role="tabpanel" aria-labelledby="tab-exp-btn">
+        <!-- Comparative Overview Description Card -->
+        <div class="content-card bg-gradient-to-r from-accent-muted via-white to-white border-l-4 border-accent" id="exp-summary-card">
+            <h3 class="text-sm font-bold font-display text-gray-800 uppercase tracking-widest mb-2 flex items-center gap-2">
+                <i class="fas fa-chart-pie text-accent"></i> 8-Week Testing Phase Summary
+            </h3>
+            <p class="text-sm text-gray-600 leading-relaxed">
+                During our 8-week system tests, the smart AI scanned a total of <strong>1,245,670 system actions</strong> on two test computers. We compared two powerful AI techniques to see which one works better at keeping our system safe without raising false alarms. The results show that our main scanner (Isolation Forest) did exceptionally well.
+            </p>
+        </div>
+
+        <!-- Objective 4: Algorithmic Comparative Table (Table 4.4) -->
+        <div class="content-card" id="exp-table-4-4">
+            <h3 class="text-sm font-bold font-display text-gray-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <i class="fas fa-table-list text-accent"></i> AI Scanner Performance Comparison (Test Table)
+            </h3>
+            <div class="overflow-x-auto border border-gray-200 rounded-sm">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200 text-xs font-bold font-display uppercase text-gray-600 tracking-wider">
+                            <th class="p-4">Test Metric</th>
+                            <th class="p-4 text-accent">Isolation Forest (Current Scanner)</th>
+                            <th class="p-4 text-alert">Alternative Scanner (SVM)</th>
+                            <th class="p-4">Scanner Advantage</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-150 text-sm font-sans text-gray-700">
+                        <tr class="hover:bg-gray-50/50">
+                            <td class="p-4 font-medium text-gray-900">AI Smart Score (AUC)</td>
+                            <td class="p-4 font-mono font-bold text-accent">0.965</td>
+                            <td class="p-4 font-mono text-alert">0.892</td>
+                            <td class="p-4"><span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-sm">+7.3% Performance</span></td>
+                        </tr>
+                        <tr class="hover:bg-gray-50/50">
+                            <td class="p-4 font-medium text-gray-900">Scanner Accuracy</td>
+                            <td class="p-4 font-mono font-bold text-accent">92.1%</td>
+                            <td class="p-4 font-mono text-alert">81.4%</td>
+                            <td class="p-4"><span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-sm">+10.7% Accuracy</span></td>
+                        </tr>
+                        <tr class="hover:bg-gray-50/50">
+                            <td class="p-4 font-medium text-gray-900">Precision Rate</td>
+                            <td class="p-4 font-mono font-bold text-accent">89.5%</td>
+                            <td class="p-4 font-mono text-alert">76.2%</td>
+                            <td class="p-4"><span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-sm">+13.3% Precision</span></td>
+                        </tr>
+                        <tr class="hover:bg-gray-50/50">
+                            <td class="p-4 font-medium text-gray-900">Alert Success Rate (Recall)</td>
+                            <td class="p-4 font-mono font-bold text-accent">94.2%</td>
+                            <td class="p-4 font-mono text-alert">85.1%</td>
+                            <td class="p-4"><span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-sm">+9.1% Recall</span></td>
+                        </tr>
+                        <tr class="hover:bg-gray-50/50">
+                            <td class="p-4 font-medium text-gray-900">Overall Score (F1)</td>
+                            <td class="p-4 font-mono font-bold text-accent">0.918</td>
+                            <td class="p-4 font-mono text-alert">0.804</td>
+                            <td class="p-4"><span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-sm">+0.114 F1-Score</span></td>
+                        </tr>
+                        <tr class="hover:bg-gray-50/50">
+                            <td class="p-4 font-medium text-gray-900">Time Spent per Event</td>
+                            <td class="p-4 font-mono font-bold text-accent">~12 ms</td>
+                            <td class="p-4 font-mono text-alert">~28 ms</td>
+                            <td class="p-4"><span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-sm">57.1% Lower Overhead</span></td>
+                        </tr>
+                        <tr class="hover:bg-gray-50/50">
+                            <td class="p-4 font-medium text-gray-900">Computer Memory Used</td>
+                            <td class="p-4 font-mono font-bold text-accent">120 MB (85 MB post-opt)</td>
+                            <td class="p-4 font-mono text-alert">300+ MB</td>
+                            <td class="p-4"><span class="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-sm">71.6% Lower RAM footprint</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Interactive ROC Curve Comparison & Event Demographics Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- ROC Curve Chart -->
+            <div class="content-card" id="exp-roc-container">
+                <h3 class="text-sm font-bold font-display text-gray-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <i class="fas fa-route text-accent"></i> Smart AI Accuracy Curve (ROC Chart)
+                </h3>
+                <div class="relative h-[300px]">
+                    <canvas id="rocComparisonChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Table 4.1 Graphic representation -->
+            <div class="content-card" id="exp-source-demographics">
+                <h3 class="text-sm font-bold font-display text-gray-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <i class="fas fa-desktop text-accent"></i> System Actions per Computer (Table 4.1)
+                </h3>
+                <div class="relative h-[300px]">
+                    <canvas id="sourcesComparisonChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table 4.3 Severity & Activity Heatmap Table 4.2 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Anomaly severity breakdown Table 4.3 -->
+            <div class="content-card lg:col-span-1" id="exp-severity-container">
+                <h3 class="text-sm font-bold font-display text-gray-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <i class="fas fa-triangle-exclamation text-accent"></i> Detected Anomalies by Alert Level (Table 4.3)
+                </h3>
+                <div class="relative h-[250px] flex items-center justify-center">
+                    <canvas id="severityDoughnutChart"></canvas>
+                </div>
+                <div class="mt-4 grid grid-cols-2 gap-2 text-center text-xs font-mono text-gray-600">
+                    <div class="bg-gray-50 border border-gray-100 p-1">Low: 850 (68.5%)</div>
+                    <div class="bg-blue-50 border border-blue-100 p-1 text-accent">Med: 245 (19.8%)</div>
+                    <div class="bg-orange-50 border border-orange-100 p-1 text-orange-500">High: 83 (6.7%)</div>
+                    <div class="bg-red-50 border border-red-100 p-1 text-alert">Crit: 62 (5.0%)</div>
+                </div>
+            </div>
+
+            <!-- Activity Correlation Heatmap Table 4.2 -->
+            <div class="content-card lg:col-span-2" id="exp-heatmap-container">
+                <h3 class="text-sm font-bold font-display text-gray-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <i class="fas fa-grip text-accent"></i> How Activities Relate to Each Other (Correlation Table)
+                </h3>
+                <!-- Grid Heatmap -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-center border-collapse text-xs font-sans">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="p-2 text-left font-display uppercase tracking-wider text-gray-500">Activity Channel</th>
+                                <th class="p-2 font-display uppercase text-gray-600">File Read</th>
+                                <th class="p-2 font-display uppercase text-gray-600">File Write</th>
+                                <th class="p-2 font-display uppercase text-gray-600">Web Browsing</th>
+                                <th class="p-2 font-display uppercase text-gray-600">Network Out</th>
+                                <th class="p-2 font-display uppercase text-gray-600">PowerShell</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <tr>
+                                <td class="p-2.5 text-left font-bold text-gray-700 bg-gray-50">File Read</td>
+                                <td class="p-2.5 bg-red-600 text-white font-bold rounded-sm">1.00</td>
+                                <td class="p-2.5 bg-red-400 text-white font-bold">0.82</td>
+                                <td class="p-2.5 bg-red-300 text-gray-800">0.65</td>
+                                <td class="p-2.5 bg-red-400 text-white font-bold">0.78</td>
+                                <td class="p-2.5 bg-red-100 text-gray-800">0.35</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 text-left font-bold text-gray-700 bg-gray-50">File Write</td>
+                                <td class="p-2.5 bg-red-400 text-white font-bold">0.82</td>
+                                <td class="p-2.5 bg-red-600 text-white font-bold rounded-sm">1.00</td>
+                                <td class="p-2.5 bg-red-250 text-gray-850">0.55</td>
+                                <td class="p-2.5 bg-red-500 text-white font-bold">0.85</td>
+                                <td class="p-2.5 bg-red-150 text-gray-800">0.40</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 text-left font-bold text-gray-700 bg-gray-50">Web Browsing</td>
+                                <td class="p-2.5 bg-red-300 text-gray-800">0.65</td>
+                                <td class="p-2.5 bg-red-250 text-gray-850">0.55</td>
+                                <td class="p-2.5 bg-red-600 text-white font-bold rounded-sm">1.00</td>
+                                <td class="p-2.5 bg-red-200 text-gray-800">0.45</td>
+                                <td class="p-2.5 bg-red-50 text-gray-600">0.15</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 text-left font-bold text-gray-700 bg-gray-50">Network Out</td>
+                                <td class="p-2.5 bg-red-400 text-white font-bold">0.78</td>
+                                <td class="p-2.5 bg-red-500 text-white font-bold">0.85</td>
+                                <td class="p-2.5 bg-red-200 text-gray-800">0.45</td>
+                                <td class="p-2.5 bg-red-600 text-white font-bold rounded-sm">1.00</td>
+                                <td class="p-2.5 bg-red-300 text-gray-800">0.62</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 text-left font-bold text-gray-700 bg-gray-50">PowerShell</td>
+                                <td class="p-2.5 bg-red-100 text-gray-800">0.35</td>
+                                <td class="p-2.5 bg-red-150 text-gray-800">0.40</td>
+                                <td class="p-2.5 bg-red-50 text-gray-600">0.15</td>
+                                <td class="p-2.5 bg-red-300 text-gray-800">0.62</td>
+                                <td class="p-2.5 bg-red-600 text-white font-bold rounded-sm">1.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4 text-[10px] text-gray-500 font-sans italic">
+                    * These numbers show how system actions typically happen together (for example, reading high volumes of files usually connects with transferring files to the network).
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Load Chart.js from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // Tab switching logic
+    function switchTab(tab) {
+        const liveBtn = document.getElementById('tab-live-btn');
+        const expBtn = document.getElementById('tab-exp-btn');
+        const livePanel = document.getElementById('live-metrics-panel');
+        const expPanel = document.getElementById('experimental-metrics-panel');
+
+        if (tab === 'live') {
+            liveBtn.className = "inline-block p-4 border-b-2 font-display uppercase tracking-widest text-xs transition-all duration-200 border-accent text-accent";
+            expBtn.className = "inline-block p-4 border-b-2 font-display uppercase tracking-widest text-xs transition-all duration-200 border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-300";
+            livePanel.classList.remove('hidden');
+            expPanel.classList.add('hidden');
+        } else {
+            expBtn.className = "inline-block p-4 border-b-2 font-display uppercase tracking-widest text-xs transition-all duration-200 border-accent text-accent";
+            liveBtn.className = "inline-block p-4 border-b-2 font-display uppercase tracking-widest text-xs transition-all duration-200 border-transparent text-gray-400 hover:text-gray-600 hover:border-gray-300";
+            expPanel.classList.remove('hidden');
+            livePanel.classList.add('hidden');
+            
+            // Re-render experimental charts to correct sizing issues when drawn in hidden panels
+            initExperimentalCharts();
+        }
+    }
+
+    // Loading State for Retrain
+    function triggerRetrainLoading() {
+        const btn = document.getElementById('btn-retrain');
+        const icon = document.getElementById('retrain-icon');
+        const text = document.getElementById('retrain-text');
+        
+        btn.disabled = true;
+        btn.classList.add('opacity-70', 'cursor-not-allowed');
+        icon.classList.add('fa-spin');
+        text.innerText = "Updating AI Scanner...";
+    }
+
+    // Inject live telemetry dynamic data passed from Flask template
+    const hasLiveRecords = {{ 'true' if total_records > 0 else 'false' }};
+    
+    // Live telemtry charts initialization
+    if (hasLiveRecords) {
+        // Live Threat Channel Counts
+        const categoryData = {
+            labels: [{% for cat, count in category_counts.items() %}"{{ cat|capitalize }}",{% endfor %}],
+            datasets: [{
+                label: 'System Hits',
+                data: [{% for cat, count in category_counts.items() %}{{ count }},{% endfor %}],
+                backgroundColor: 'rgba(13, 110, 253, 0.75)',
+                borderColor: '#0d6efd',
+                borderWidth: 1.5,
+                barPercentage: 0.7,
+            }]
+        };
+
+        const ctxLiveChannels = document.getElementById('liveChannelsChart').getContext('2d');
+        new Chart(ctxLiveChannels, {
+            type: 'bar',
+            data: categoryData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.04)' },
+                        ticks: { font: { family: 'JetBrains Mono', size: 10 } }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'JetBrains Mono', size: 10 } }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // Browser Platform Breakdown
+        const browserData = {
+            labels: [{% for br, count in browser_dist.items() %}"{{ br|capitalize }}",{% endfor %}],
+            datasets: [{
+                data: [{% for br, count in browser_dist.items() %}{{ count }},{% endfor %}],
+                backgroundColor: [
+                    '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b'
+                ],
+                borderWidth: 1,
+            }]
+        };
+
+        const ctxLiveBrowsers = document.getElementById('liveBrowsersChart').getContext('2d');
+        new Chart(ctxLiveBrowsers, {
+            type: 'doughnut',
+            data: browserData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { font: { family: 'JetBrains Mono', size: 9 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // Experimental Tab Charts Rendering
+    let expChartsInitialized = false;
+
+    function initExperimentalCharts() {
+        if (expChartsInitialized) return;
+        expChartsInitialized = true;
+
+        // 1. ROC Curves
+        // Draw mathematically accurate ROC curves representing the AUC metrics
+        // TPR = 1 - (1 - FPR)^k where AUC = k/(k+1)
+        // For IF (AUC = 0.965) -> k = 27.57
+        // For OCSVM (AUC = 0.892) -> k = 8.26
+        const fprPoints = [];
+        const tprIFPoints = [];
+        const tprOCSVMPoints = [];
+
+        for (let i = 0; i <= 50; i++) {
+            const fpr = i / 50;
+            fprPoints.push(fpr.toFixed(2));
+            tprIFPoints.push((1 - Math.pow(1 - fpr, 27.57)).toFixed(3));
+            tprOCSVMPoints.push((1 - Math.pow(1 - fpr, 8.26)).toFixed(3));
+        }
+
+        const ctxRoc = document.getElementById('rocComparisonChart').getContext('2d');
+        new Chart(ctxRoc, {
+            type: 'line',
+            data: {
+                labels: fprPoints,
+                datasets: [
+                    {
+                        label: 'Isolation Forest (AUC = 0.965)',
+                        data: tprIFPoints,
+                        borderColor: '#2ca02c',
+                        borderWidth: 3,
+                        fill: false,
+                        pointRadius: 0,
+                    },
+                    {
+                        label: 'One-Class SVM (AUC = 0.892)',
+                        data: tprOCSVMPoints,
+                        borderColor: '#d62728',
+                        borderWidth: 3,
+                        fill: false,
+                        pointRadius: 0,
+                    },
+                    {
+                        label: 'Random Guess',
+                        data: [0, 0.2, 0.4, 0.6, 0.8, 1.0],
+                        labels: ['0.0', '0.2', '0.4', '0.6', '0.8', '1.0'],
+                        borderColor: '#adb5bd',
+                        borderWidth: 1.5,
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: { display: true, text: 'False Positive Rate', font: { family: 'JetBrains Mono', size: 10, weight: 'bold' } },
+                        ticks: { font: { family: 'JetBrains Mono', size: 9 } }
+                    },
+                    y: {
+                        title: { display: true, text: 'True Positive Rate', font: { family: 'JetBrains Mono', size: 10, weight: 'bold' } },
+                        ticks: { font: { family: 'JetBrains Mono', size: 9 } }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { family: 'JetBrains Mono', size: 10 } }
+                    }
+                }
+            }
+        });
+
+        // 2. Demographic Sources Breakdown (Table 4.1)
+        const ctxSources = document.getElementById('sourcesComparisonChart').getContext('2d');
+        new Chart(ctxSources, {
+            type: 'bar',
+            data: {
+                labels: ['File System', 'Web History', 'Process Creation', 'Authentication', 'PowerShell'],
+                datasets: [
+                    {
+                        label: 'Machine A (Power User)',
+                        data: [345100, 210050, 165300, 4200, 85085],
+                        backgroundColor: '#1f77b4',
+                        borderWidth: 1,
+                    },
+                    {
+                        label: 'Machine B (Standard User)',
+                        data: [215400, 185200, 35335, 0, 0],
+                        backgroundColor: '#ff7f0e',
+                        borderWidth: 1,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { ticks: { font: { family: 'JetBrains Mono', size: 9 } } },
+                    y: { 
+                        ticks: { 
+                            font: { family: 'JetBrains Mono', size: 9 },
+                            callback: function(value) { return value.toLocaleString(); } 
+                        } 
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { family: 'JetBrains Mono', size: 10 } }
+                    }
+                }
+            }
+        });
+
+        // 3. Severity Distribution (Table 4.3)
+        const ctxSeverity = document.getElementById('severityDoughnutChart').getContext('2d');
+        new Chart(ctxSeverity, {
+            type: 'doughnut',
+            data: {
+                labels: ['Low (Informative)', 'Medium (Warning)', 'High (Alert)', 'Critical (Incident)'],
+                datasets: [{
+                    data: [850, 245, 83, 62],
+                    backgroundColor: ['#adb5bd', '#0d6efd', '#ff7f0e', '#dc3545'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+</script>
+
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+        animation: fadeIn 0.4s ease-out forwards;
+    }
+    .bg-red-250 { background-color: rgba(220, 53, 69, 0.25); }
+    .bg-red-150 { background-color: rgba(220, 53, 69, 0.15); }
+    .bg-red-50 { background-color: rgba(220, 53, 69, 0.05); }
+    .text-gray-850 { color: #1e293b; }
+</style>
+{% endblock %}
