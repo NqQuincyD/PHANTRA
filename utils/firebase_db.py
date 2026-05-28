@@ -145,7 +145,15 @@ class FirebaseDB:
             return []
         try:
             docs = db_firestore.collection('users').stream()
-            return [doc.to_dict() for doc in docs]
+            users_list = []
+            for doc in docs:
+                u_dict = doc.to_dict()
+                try:
+                    u_dict['id'] = int(doc.id)
+                except (ValueError, TypeError):
+                    u_dict['id'] = doc.id
+                users_list.append(u_dict)
+            return users_list
         except Exception as e:
             print(f"Firestore error (get_global_users): {e}")
             return []
