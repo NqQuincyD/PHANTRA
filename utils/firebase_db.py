@@ -160,11 +160,21 @@ class FirebaseDB:
 
     @staticmethod
     def get_browser_history_by_username(username, limit=300):
-        """Retrieves browser history from Firestore by finding the user ID for a username."""
+        """Retrieves browser history from Firestore by username directly or falls back to finding the user ID."""
         if db_firestore is None:
             return []
         try:
-            # 1. Find user in Firestore by username
+            # 1. Try querying browser_history by username directly
+            history_docs = db_firestore.collection('browser_history') \
+                .where('username', '==', username) \
+                .limit(limit) \
+                .stream()
+                
+            history_list = [doc.to_dict() for doc in history_docs]
+            if history_list:
+                return history_list
+                
+            # 2. Fallback: Find user in Firestore by username
             users_docs = db_firestore.collection('users') \
                 .where('username', '==', username) \
                 .limit(1) \
@@ -181,7 +191,7 @@ class FirebaseDB:
             if user_id is None:
                 return []
                 
-            # 2. Query browser_history by user_id
+            # 3. Query browser_history by user_id
             history_docs = db_firestore.collection('browser_history') \
                 .where('user_id', '==', user_id) \
                 .limit(limit) \

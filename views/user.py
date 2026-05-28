@@ -361,6 +361,7 @@ def visited_webs():
                 history = BrowserHistory(**item)
                 db.session.add(history)
                 history_data.append({
+                    'username': username,
                     'Browser': browser,
                     'Title': item['title'],
                     'URL': item['url'],
