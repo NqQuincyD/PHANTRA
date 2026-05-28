@@ -989,6 +989,10 @@ def update_ml_pipeline():
         # Sync High/Critical anomalies to Firebase
         try:
             high_risk_df = df[df['risk_level'].isin(['High', 'Critical'])]
+            if 'Last Visit' in high_risk_df.columns:
+                high_risk_df = high_risk_df.sort_values(by='Last Visit', ascending=False)
+                
+            sync_count = 0
             for _, row in high_risk_df.iterrows():
                 # Avoid redundant syncs to save quota
                 h_id = row['history_id']
@@ -1000,6 +1004,10 @@ def update_ml_pipeline():
                 u = User.query.filter_by(username=row['Username']).first()
                 uid = u.id if u else 0
                 
+                # Limit to a maximum of 5 concurrent uploads per update to prevent Firestore quota exhaustion (429/504)
+                if sync_count >= 5:
+                    break
+                    
                 # Sync to Firebase in background
                 import threading
                 threading.Thread(
@@ -1014,6 +1022,7 @@ def update_ml_pipeline():
                     daemon=True
                 ).start()
                 synced_history_ids.add(h_id)
+                sync_count += 1
         except Exception as e:
             print(f"Firebase Sync Error (ML anomalies): {e}")
     except Exception as e:
