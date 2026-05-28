@@ -399,6 +399,7 @@ def visited_webs():
         user_record = Users.query.filter_by(username=username).first()
         session_windows = get_user_session_windows(username)
         
+        histories = []
         if user_record:
             if session_windows:
                 # Filter history by these windows
@@ -412,8 +413,31 @@ def visited_webs():
                 histories = BrowserHistory.query.filter_by(user_id=user_record.id)\
                                .order_by(BrowserHistory.last_visit_time.desc())\
                                .limit(300).all()
-        else:
-            histories = []
+        
+        # If no local history found, try fetching from Firebase
+        if not histories:
+            global_history = FirebaseDB.get_browser_history_by_username(username)
+            if global_history:
+                from datetime import datetime
+                class FirebaseHistoryAdapter:
+                    def __init__(self, data):
+                        self.browser = data.get('Browser') or data.get('browser') or ''
+                        self.title = data.get('Title') or data.get('title') or ''
+                        self.url = data.get('URL') or data.get('url') or ''
+                        self.visit_count = data.get('Visit Count') or data.get('visit_count') or 1
+                        
+                        last_visit = data.get('Last Visit') or data.get('last_visit') or data.get('last_visit_time')
+                        if isinstance(last_visit, str):
+                            try:
+                                self.last_visit_time = datetime.strptime(last_visit, '%Y-%m-%d %H:%M:%S')
+                            except ValueError:
+                                self.last_visit_time = datetime.utcnow()
+                        elif last_visit:
+                            self.last_visit_time = last_visit
+                        else:
+                            self.last_visit_time = datetime.utcnow()
+                            
+                histories = [FirebaseHistoryAdapter(h) for h in global_history]
     else:
         histories = []
 

@@ -158,5 +158,40 @@ class FirebaseDB:
             print(f"Firestore error (get_global_users): {e}")
             return []
 
+    @staticmethod
+    def get_browser_history_by_username(username, limit=300):
+        """Retrieves browser history from Firestore by finding the user ID for a username."""
+        if db_firestore is None:
+            return []
+        try:
+            # 1. Find user in Firestore by username
+            users_docs = db_firestore.collection('users') \
+                .where('username', '==', username) \
+                .limit(1) \
+                .stream()
+            
+            user_id = None
+            for doc in users_docs:
+                try:
+                    user_id = int(doc.id)
+                except (ValueError, TypeError):
+                    user_id = doc.id
+                break
+            
+            if user_id is None:
+                return []
+                
+            # 2. Query browser_history by user_id
+            history_docs = db_firestore.collection('browser_history') \
+                .where('user_id', '==', user_id) \
+                .limit(limit) \
+                .stream()
+                
+            return [doc.to_dict() for doc in history_docs]
+        except Exception as e:
+            print(f"Firestore error (get_browser_history_by_username): {e}")
+            return []
+
+
 # Import firestore here to use constants like SERVER_TIMESTAMP
 from firebase_admin import firestore
