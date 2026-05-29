@@ -37,7 +37,7 @@ def login():
             return render_template('auth/login.html', form=form)
 
         # Check if email exists
-        user = User.query.filter_by(email=form.email.data).first()
+        user = FirebaseDB.get_user_by_email(form.email.data)
         if not user:
             log_auth_event('login_failed', email=form.email.data, details='Email not registered')
             flash('Email not registered', 'danger')
@@ -60,11 +60,12 @@ def login():
         log_auth_event('login_success', user=user)
         
         # Sync user to Firebase on login
+        from firebase_admin import firestore
         FirebaseDB.save_user(user.id, {
             'username': user.username,
             'email': user.email,
             'role': user.role,
-            'last_login': datetime.utcnow()
+            'last_login': firestore.SERVER_TIMESTAMP
         })
         if user.role == 'User':
             return redirect(url_for('user.home'))
@@ -90,7 +91,7 @@ def register():
             return render_template('auth/register.html', form=form)
 
         # Check if email already exists
-        existing_user = User.query.filter_by(email=form.email.data).first()
+        existing_user = FirebaseDB.get_user_by_email(form.email.data)
         if existing_user:
             log_auth_event('register_failed', email=form.email.data, details='Email already registered')
             flash('Email already registered', 'danger')
@@ -98,29 +99,37 @@ def register():
 
         # Attempt to create new user
         try:
-            user = User(
+            from firebase_config import db_firestore
+            from firebase_admin import firestore
+            from models import FirebaseUser
+            
+            # Create a new document in the 'users' collection to generate a unique Firestore string ID
+            user_ref = db_firestore.collection('users').document()
+            user_id = user_ref.id
+            
+            user_metadata = {
+                'username': form.username.data,
+                'email': form.email.data,
+                'password': generate_password_hash(form.password.data),
+                'role': form.role.data,
+                'created_at': firestore.SERVER_TIMESTAMP
+            }
+            user_ref.set(user_metadata)
+            
+            user = FirebaseUser(
+                user_id=user_id,
                 username=form.username.data,
                 email=form.email.data,
-                password=generate_password_hash(form.password.data),
-                role=form.role.data
+                role=form.role.data,
+                password_hash=user_metadata['password']
             )
-            db.session.add(user)
-            db.session.commit()
+            
             log_auth_event('register_success', user=user)  # Log successful registration
-
-            # Sync new user to Firebase
-            FirebaseDB.save_user(user.id, {
-                'username': user.username,
-                'email': user.email,
-                'role': user.role,
-                'created_at': datetime.utcnow()
-            })
 
             flash('Registration successful! Please login.', 'success')
             return redirect(url_for('auth.login'))
         except Exception as e:
-            db.session.rollback()
-            log_auth_event('register_failed', email=form.email.data, details=f'DB error: {str(e)}')
+            log_auth_event('register_failed', email=form.email.data, details=f'Firebase error: {str(e)}')
             flash('Registration failed. Please try again.', 'danger')
 
     return render_template('auth/register.html', form=form)

@@ -107,3 +107,21 @@ def init_db(app):
     with app.app_context():
         db.create_all()
         #db.drop_all()  # Uncomment to drop all tables
+
+class FirebaseUser(UserMixin):
+    def __init__(self, user_id, username, email, role, password_hash):
+        self.id = str(user_id)
+        self.username = username
+        self.email = email
+        self.role = role
+        self.password = password_hash
+        
+    def get_id(self):
+        return self.id
+        
+    def check_password(self, password_input):
+        from werkzeug.security import check_password_hash
+        try:
+            return check_password_hash(self.password, password_input)
+        except ValueError:
+            return self.password == password_input

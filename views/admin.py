@@ -1,14 +1,12 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from sqlalchemy import func, desc
+from sqlalchemy import func
 from forms import AdminUserForm, AddUserForm
-from models import db, User, AuthLog
 from werkzeug.security import generate_password_hash
 from datetime import datetime
 import pandas as pd
 from utils.firebase_db import FirebaseDB
-
-import os
+from firebase_admin import firestore
 
 adm_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -26,13 +24,13 @@ def inject_notification_count():
         
         # Filter out read alerts for Admin
         if current_user.is_authenticated:
-            from models import UserActivity
-            # Admins always use 'Admin Alert Read'
-            read_activities = UserActivity.query.filter_by(
-                user_id=current_user.id,
-                activity_type='Admin Alert Read'
-            ).all()
-            read_history_ids = {act.details for act in read_activities}
+            # Under purely cloud architecture, we fetch read activities from Firestore
+            from firebase_config import db_firestore
+            docs = db_firestore.collection('activities') \
+                .where('user_id', '==', str(current_user.id)) \
+                .where('activity_type', '==', 'Admin Alert Read') \
+                .stream()
+            read_history_ids = {doc.to_dict().get('details') for doc in docs}
             
             if not high_risk_df.empty:
                 high_risk_df = high_risk_df[~high_risk_df['history_id'].astype(str).isin(read_history_ids)]
@@ -51,21 +49,24 @@ def home():
         flash('Access denied', 'danger')
         return redirect(url_for('auth.login'))
 
-    # Total users
-    total_users = User.query.count()
+    # Get global users from Firebase
+    global_users = FirebaseDB.get_global_users()
+    total_users = len(global_users)
 
     # Users by role
-    roles_analysis = db.session.query(
-        User.role, func.count(User.id)
-    ).group_by(User.role).all()
+    roles_counts = {}
+    for u in global_users:
+        r = u.get('role') or 'User'
+        roles_counts[r] = roles_counts.get(r, 0) + 1
 
-    roles_labels = [role for role, count in roles_analysis]
-    roles_counts = [count for role, count in roles_analysis]
+    roles_labels = list(roles_counts.keys())
+    roles_counts_list = list(roles_counts.values())
 
     # Authentication events analysis
-    total_auth_events = AuthLog.query.count()
-    success_events = AuthLog.query.filter(AuthLog.action.in_(['login_success','register_success'])).count()
-    failed_events = AuthLog.query.filter(AuthLog.action.in_(['login_failed','register_failed'])).count()
+    auth_logs = FirebaseDB.get_all_auth_logs(limit=500)
+    total_auth_events = len(auth_logs)
+    success_events = len([log for log in auth_logs if 'success' in log.get('action', '')])
+    failed_events = len([log for log in auth_logs if 'failed' in log.get('action', '')])
 
     auth_labels = ['Successful', 'Possible Intrusion']
     auth_counts = [success_events, failed_events]
@@ -74,37 +75,28 @@ def home():
         'admin/home.html',
         total_users=total_users,
         roles_labels=roles_labels,
-        roles_counts=roles_counts,
+        roles_counts=roles_counts_list,
         auth_labels=auth_labels,
         auth_counts=auth_counts,
         total_auth_events=total_auth_events
     )
 
-# @adm_bp.route('/dashboard')
-# @login_required
-# def home():
-#     return render_template('admin/home.html')
 
 @adm_bp.route('/security-console', methods=['GET', 'POST'])
 @login_required
 def security_console():
-   
     if current_user.role != 'Admin':
         flash('Access denied', 'danger')
         return redirect(url_for('auth.login'))
 
-   
-    auth_logs = AuthLog.query.order_by(AuthLog.timestamp.desc()).all()
+    auth_logs = FirebaseDB.get_all_auth_logs(limit=300)
 
+    # Convert timestamp to standard formats if necessary for rendering
+    # Jinja2 handles dot notation of dicts seamlessly
     return render_template(
         'admin/security.html',
         auth_logs=auth_logs
     )
-
-# @adm_bp.route('/security-console', methods=['GET', 'POST'])
-# @login_required
-# def security_console():
-#     return render_template('admin/security.html')
 
 
 @adm_bp.route('/security-threats')
@@ -119,10 +111,10 @@ def security_threats():
 @adm_bp.route('/reports-analytics', methods=['GET', 'POST'])
 @login_required
 def reports_analytics():
-     if current_user.role != 'Admin':
-         flash('Access denied', 'danger')
-         return redirect(url_for('auth.login'))
-     return render_template('admin/reports.html')
+    if current_user.role != 'Admin':
+        flash('Access denied', 'danger')
+        return redirect(url_for('auth.login'))
+    return render_template('admin/reports.html')
 
 
 @adm_bp.route('/model-evaluation')
@@ -186,6 +178,7 @@ def model_evaluation():
         browser_dist=browser_dist
     )
 
+
 @adm_bp.route('/model-evaluation/retrain', methods=['POST'])
 @login_required
 def retrain_model():
@@ -201,6 +194,7 @@ def retrain_model():
         flash(f'Error updating ML pipeline: {str(e)}', 'danger')
         return redirect(url_for('admin.model_evaluation'))
 
+
 @adm_bp.route('/monitoring-hub', methods=['GET', 'POST'])
 @login_required
 def monitoring_hub():
@@ -208,86 +202,79 @@ def monitoring_hub():
         flash('Access denied', 'danger')
         return redirect(url_for('auth.login'))
 
-    # Get local users
-    local_users = User.query.order_by(User.id.desc()).all()
-    # Get global users from Firebase
-    global_users_data = FirebaseDB.get_global_users()
-    
-    # Create a consolidated list for display
-    # We use a dictionary keyed by username to avoid duplicates
-    consolidated_users = {u.username: u for u in local_users}
-    for gu in global_users_data:
-        if gu['username'] not in consolidated_users:
-            # Create a mock user object for display if not found locally
-            consolidated_users[gu['username']] = gu
-
-    users = consolidated_users.values()
+    # Fetch users exclusively from Firebase
+    users = FirebaseDB.get_global_users()
     return render_template('admin/users.html', users=users)
 
-@adm_bp.route('/update-user/<int:user_id>', methods=['GET', 'POST'])
+
+@adm_bp.route('/update-user/<string:user_id>', methods=['GET', 'POST'])
 @login_required
 def update_user(user_id):
     if current_user.role != 'Admin':
         flash('Access denied', 'danger')
         return redirect(url_for('auth.login'))
 
-    user = User.query.get_or_404(user_id)
+    user = FirebaseDB.get_user_by_id(user_id)
+    if not user:
+        flash('User not found', 'danger')
+        return redirect(url_for('admin.monitoring_hub'))
+
     form = AdminUserForm(obj=user)  
 
     if form.validate_on_submit():
-        user.username = form.username.data
-        user.email = form.email.data
-        user.role = form.role.data
-        db.session.commit()
-        
-        # Sync to Firebase
-        try:
-            from firebase_admin import firestore
-            user_metadata = {
-                'username': user.username,
-                'email': user.email,
-                'role': user.role,
-                'last_updated': firestore.SERVER_TIMESTAMP
-            }
-            FirebaseDB.save_user(user.id, user_metadata)
-        except Exception as e:
-            print(f"Firebase Sync Error (User update): {e}")
-
+        user_metadata = {
+            'username': form.username.data,
+            'email': form.email.data,
+            'role': form.role.data,
+            'last_updated': firestore.SERVER_TIMESTAMP
+        }
+        FirebaseDB.save_user(user_id, user_metadata)
         flash('User updated successfully.', 'success')
         return redirect(url_for('admin.monitoring_hub'))
 
     return render_template('admin/update.html', form=form, user=user)
 
-@adm_bp.route('/view-user/<int:user_id>')
+
+@adm_bp.route('/view-user/<string:user_id>')
 @login_required
 def view_user(user_id):
     if current_user.role != 'Admin':
         flash('Access denied', 'danger')
         return redirect(url_for('auth.login'))
 
-    user = User.query.get_or_404(user_id)
+    user = FirebaseDB.get_user_by_id(user_id)
+    if not user:
+        flash('User not found', 'danger')
+        return redirect(url_for('admin.monitoring_hub'))
     
     # Gather stats
-    from models import AuthLog, UserActivity, Users, BrowserHistory
-    total_logins = AuthLog.query.filter_by(user_id=user.id, action='login_success').count()
-    last_login = AuthLog.query.filter_by(user_id=user.id, action='login_success').order_by(AuthLog.timestamp.desc()).first()
+    auth_logs = FirebaseDB.get_all_auth_logs(limit=500)
+    user_auth_logs = [log for log in auth_logs if str(log.get('user_id')) == str(user.id)]
     
-    users_record = Users.query.filter_by(username=user.username).first()
-    total_history = 0
-    if users_record:
-        total_history = BrowserHistory.query.filter_by(user_id=users_record.id).count()
+    total_logins = len([log for log in user_auth_logs if log.get('action') == 'login_success'])
+    
+    # Get last success login
+    success_logins = [log for log in user_auth_logs if log.get('action') == 'login_success']
+    last_login = success_logins[0] if success_logins else None
+    
+    global_history = FirebaseDB.get_browser_history_by_username(user.username)
+    total_history = len(global_history)
         
-    activities = UserActivity.query.filter_by(user_id=user.id).order_by(UserActivity.timestamp.desc()).limit(5).all()
+    activities = FirebaseDB.get_all_activities(limit=500)
+    user_activities = [act for act in activities if str(act.get('user_id')) == str(user.id)]
     
-    # Fetch from Firebase if available
-    cloud_activities = FirebaseDB.get_all_activities(limit=10)
-    # Filter cloud activities for this user specifically (if user_id matches)
-    # Note: in Firestore we might store user_id as string or int
-    cloud_activities = [act for act in cloud_activities if str(act.get('user_id')) == str(user.id)]
-    
-    return render_template('admin/view_user.html', user=user, total_logins=total_logins, last_login=last_login, total_history=total_history, activities=activities, cloud_activities=cloud_activities)
+    return render_template(
+        'admin/view_user.html', 
+        user=user, 
+        total_logins=total_logins, 
+        last_login=last_login, 
+        total_history=total_history, 
+        activities=user_activities[:5], 
+        cloud_activities=user_activities[:10]
+    )
 
-@adm_bp.route('/toggle-suspend/<int:user_id>', methods=['POST'])
+
+@adm_bp.route('/toggle-suspend/<string:user_id>', methods=['POST'])
 @login_required
 def toggle_suspend(user_id):
     if current_user.role != 'Admin':
@@ -296,31 +283,26 @@ def toggle_suspend(user_id):
     if current_user.id == user_id:
         return jsonify({'status': 'error', 'message': 'Cannot suspend yourself'}), 400
 
-    user = User.query.get_or_404(user_id)
+    user = FirebaseDB.get_user_by_id(user_id)
+    if not user:
+        return jsonify({'status': 'error', 'message': 'User not found'}), 404
+
     if user.role == 'Suspended':
-        user.role = 'User'
+        new_role = 'User'
         action = 'activated'
     else:
-        user.role = 'Suspended'
+        new_role = 'Suspended'
         action = 'suspended'
         
-    db.session.commit()
-    
-    # Sync to Firebase
-    try:
-        from firebase_admin import firestore
-        user_metadata = {
-            'username': user.username,
-            'role': user.role,
-            'last_updated': firestore.SERVER_TIMESTAMP
-        }
-        FirebaseDB.save_user(user.id, user_metadata)
-    except Exception as e:
-        print(f"Firebase Sync Error (User suspend): {e}")
+    FirebaseDB.save_user(user_id, {
+        'role': new_role,
+        'last_updated': firestore.SERVER_TIMESTAMP
+    })
 
     return jsonify({'status': 'success', 'message': f'User {user.username} has been {action}.'})
 
-@adm_bp.route('/delete-user/<int:user_id>', methods=['POST'])
+
+@adm_bp.route('/delete-user/<string:user_id>', methods=['POST'])
 @login_required
 def delete_user(user_id):
     if current_user.role != 'Admin':
@@ -329,49 +311,16 @@ def delete_user(user_id):
     if current_user.id == user_id:
         return jsonify({'status': 'error', 'message': 'Cannot delete yourself'}), 400
 
-    user = User.query.get_or_404(user_id)
-    username = user.username
-    
-    from models import AuthLog, UserActivity, Anomaly, Users, BrowserHistory
-    
-    try:
-        # 1. Delete AuthLogs
-        AuthLog.query.filter_by(user_id=user.id).delete()
-        # 2. Delete UserActivities
-        UserActivity.query.filter_by(user_id=user.id).delete()
-        # 3. Delete Anomalies
-        Anomaly.query.filter_by(user_id=user.id).delete()
+    user = FirebaseDB.get_user_by_id(user_id)
+    if not user:
+        return jsonify({'status': 'error', 'message': 'User not found'}), 404
         
-        # 4. Delete BrowserHistory and Users record
-        users_record = Users.query.filter_by(username=user.username).first()
-        if users_record:
-            BrowserHistory.query.filter_by(user_id=users_record.id).delete()
-            db.session.delete(users_record)
-            
-        # 5. Delete User
-        db.session.delete(user)
-        db.session.commit()
-        
-        return jsonify({'status': 'success', 'message': f'User {username} deleted permanently.'})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-    if current_user.role != 'Admin':
-        flash('Access denied', 'danger')
-        return redirect(url_for('auth.login'))
+    success = FirebaseDB.delete_user_data(user.username, user_id)
+    if success:
+        return jsonify({'status': 'success', 'message': f'User {user.username} deleted permanently.'})
+    else:
+        return jsonify({'status': 'error', 'message': 'Failed to delete user from Firebase'}), 500
 
-    user = User.query.get_or_404(user_id)
-    form = AdminUserForm(obj=user)  
-
-    if form.validate_on_submit():
-        user.username = form.username.data
-        user.email = form.email.data
-        user.role = form.role.data
-        db.session.commit()
-        flash('User updated successfully.', 'success')
-        return redirect(url_for('admin.monitoring_hub'))
-
-    return render_template('admin/update.html', form=form, user=user)
 
 @adm_bp.route('/add-user', methods=['GET', 'POST'])
 @login_required
@@ -381,29 +330,27 @@ def add_user():
         return redirect(url_for('auth.login'))
     form = AddUserForm()
     if form.validate_on_submit():
-        existing_user = User.query.filter_by(email=form.email.data).first()
+        existing_user = FirebaseDB.get_user_by_email(form.email.data)
         if existing_user:
             flash('Email already registered', 'danger')
             return redirect(url_for('admin.add_user'))
 
-        user = User(
-            username=form.username.data,
-            email=form.email.data,
-            password=generate_password_hash(form.password.data),
-            role=form.role.data
-        )
-        db.session.add(user)
-        db.session.commit()
+        from firebase_config import db_firestore
+        user_ref = db_firestore.collection('users').document()
+        user_metadata = {
+            'username': form.username.data,
+            'email': form.email.data,
+            'password': generate_password_hash(form.password.data),
+            'role': form.role.data,
+            'created_at': firestore.SERVER_TIMESTAMP
+        }
+        user_ref.set(user_metadata)
+        
         flash('User added successfully!', 'success')
         return redirect(url_for('admin.monitoring_hub'))
 
     return render_template('admin/add.html', form=form)
 
-
-# @adm_bp.route('/monitoring-hub', methods=['GET', 'POST'])
-# @login_required
-# def monitoring_hub():
-#     return render_template('admin/users.html')
 
 @adm_bp.route('/file-logs', methods=['GET'])
 @login_required
@@ -412,8 +359,49 @@ def file_logs():
         flash('Access denied', 'danger')
         return redirect(url_for('auth.login'))
         
-    from models import FileTransfer
-    
-    transfers = FileTransfer.query.order_by(FileTransfer.timestamp.desc()).all()
+    # Query file transfers from Firestore
+    from firebase_config import db_firestore
+    try:
+        docs = db_firestore.collection('file_transfers') \
+            .order_by('timestamp', direction=firestore.Query.DESCENDING) \
+            .limit(100) \
+            .stream()
+        raw_transfers = []
+        for doc in docs:
+            raw_transfers.append((doc.to_dict(), doc.id))
+    except Exception as e:
+        print(f"Error fetching file transfers from Firestore: {e}")
+        raw_transfers = []
+        
+    class FirestoreTransferAdapter:
+        def __init__(self, data, doc_id):
+            self.id = doc_id
+            self.filename = data.get('filename')
+            self.file_size = data.get('file_size') or 0
+            self.is_threat = data.get('is_threat') or False
+            self.threat_details = data.get('threat_details') or 'No threats detected'
+            
+            ts = data.get('timestamp')
+            if isinstance(ts, str):
+                try:
+                    self.timestamp = datetime.strptime(ts, '%Y-%m-%d %H:%M:%S')
+                except ValueError:
+                    self.timestamp = datetime.utcnow()
+            elif ts:
+                self.timestamp = ts
+            else:
+                self.timestamp = datetime.utcnow()
+                
+            self.status = data.get('status')
+            
+            class Entity:
+                def __init__(self, username, email):
+                    self.username = username
+                    self.email = email
+                    
+            self.sender = Entity(data.get('sender_username') or 'Unknown', data.get('sender_email') or 'Unknown')
+            self.receiver = Entity(data.get('receiver_username') or 'Unknown', data.get('receiver_email') or 'Unknown')
+            
+    transfers = [FirestoreTransferAdapter(t[0], t[1]) for t in raw_transfers]
     
     return render_template('admin/file_logs.html', transfers=transfers)

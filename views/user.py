@@ -13,7 +13,6 @@ import re
 import matplotlib.pyplot as plt
 import seaborn as sns
 from flask import send_from_directory
-from models import db, Users, BrowserHistory
 from utils.history_utils import get_browser_history_paths, extract_history_from_browser
 from io import BytesIO
 from werkzeug.utils import secure_filename
@@ -29,9 +28,7 @@ from browser_history import get_history
 from collections import defaultdict, deque
 import threading
 from datetime import datetime, timedelta
-from models import db, User
-from models import db, Laptop, UserActivity, Anomaly
-from forms import  RegistrationForm
+from forms import RegistrationForm, LaptopRegistrationForm
 import sqlite3
 import glob
 import winreg 
@@ -133,7 +130,7 @@ def home():
         'trading': r'\b(forex|crypto|bitcoin|trading|binance|coinbase|kraken|mt[45])\b',
         'hacking': r'\b(hack|crack|keygen|cheat|exploit|bypass|ddos|injection)\b',
         'money': r'\b(western[\s-]?union|money[\s-]?gram|paypal|venmo|cash[\s-]?app)\b',
-        'cloud': r'\b(dropbox|google[\s-]?drive|mega(\.nz)?|onedrive|box(\.com)?)\b',
+        'cloud': r'\b(dropbox|google[\s-]?drive|mega(?:\.nz)?|onedrive|box(?:\.com)?)\b',
         'anonymous': r'\b(tor|vpn|proxy|anonymous|incognito|hide[\s-]?ip)\b',
         'shopping': r'\b(amazon|ebay|alibaba|etsy|shopify|walmart|target)\b',
         'job': r'\b(linkedin|indeed|monster|career|job|employment)\b',
@@ -164,20 +161,25 @@ def home():
     chart_scores = [x[1] for x in sorted_threats]
 
     # --- Admin Features ---
-    total_users = User.query.count()
+    # Fetch all users from Firestore
+    global_users = FirebaseDB.get_global_users()
+    total_users = len(global_users)
     
-    roles_analysis = db.session.query(
-        User.role, func.count(User.id)
-    ).group_by(User.role).all()
-
-    roles_labels = [role for role, count in roles_analysis]
-    roles_counts = [count for role, count in roles_analysis]
-
-    # Authentication events analysis
-    total_auth_events = AuthLog.query.count()
-    success_events = AuthLog.query.filter(AuthLog.action.in_(['login_success','register_success'])).count()
-    failed_events = AuthLog.query.filter(AuthLog.action.in_(['login_failed','register_failed'])).count()
-
+    from collections import defaultdict
+    roles_counts_map = defaultdict(int)
+    for u in global_users:
+        role = u.get('role') or 'User'
+        roles_counts_map[role] += 1
+        
+    roles_labels = list(roles_counts_map.keys())
+    roles_counts = list(roles_counts_map.values())
+    
+    # Fetch auth logs from Firestore
+    auth_logs = FirebaseDB.get_all_auth_logs(limit=2000)
+    total_auth_events = len(auth_logs)
+    success_events = sum(1 for log in auth_logs if log.get('action') in ['login_success', 'register_success'])
+    failed_events = sum(1 for log in auth_logs if log.get('action') in ['login_failed', 'register_failed'])
+    
     auth_labels = ['Successful', 'Possible Intrusion']
     auth_counts = [success_events, failed_events]
 
@@ -207,45 +209,93 @@ def mobile():
     return render_template('user/mobile.html', user=current_user)
 
 @user_bp.route('/add-computers', methods=['GET', 'POST'])
+@login_required
 def add_computers():
-  
-    return render_template('user/add_computers.html')
+    from forms import LaptopRegistrationForm
+    form = LaptopRegistrationForm()
+    if form.validate_on_submit():
+        from firebase_config import db_firestore
+        if db_firestore is not None:
+            try:
+                # Add laptop to firestore 'laptops' collection
+                laptop_data = {
+                    'full_name': form.full_name.data,
+                    'email': form.email.data,
+                    'laptop_name': form.laptop_name.data,
+                    'laptop_model': form.laptop_model.data,
+                    'serial_number': form.serial_number.data,
+                    'laptop_os': form.laptop_os.data,
+                    'status': 'active'
+                }
+                db_firestore.collection('laptops').add(laptop_data)
+                flash('Endpoint registered successfully!', 'success')
+                return redirect(url_for('user.computer_management'))
+            except Exception as e:
+                flash(f'Registration Error: {str(e)}', 'error')
+        else:
+            flash('Database Connection Error', 'error')
+            
+    return render_template('user/add_computers.html', form=form)
 
 @user_bp.route('/computer-management', methods=['GET'])
+@login_required
 def computer_management():
-    # Get all computers ordered by ID (or any other field you prefer)
-    computers = Laptop.query.order_by(Laptop.id).all()
-    
-    # Count total computers
+    # Fetch from Firestore 'laptops'
+    from firebase_config import db_firestore
+    computers = []
+    if db_firestore is not None:
+        try:
+            docs = db_firestore.collection('laptops').stream()
+            for doc in docs:
+                data = doc.to_dict()
+                class LaptopAdapter:
+                    def __init__(self, doc_id, d):
+                        self.id = doc_id
+                        self.full_name = d.get('full_name', '')
+                        self.email = d.get('email', '')
+                        self.laptop_name = d.get('laptop_name', '')
+                        self.laptop_model = d.get('laptop_model', '')
+                        self.serial_number = d.get('serial_number', '')
+                        self.laptop_os = d.get('laptop_os', '')
+                        self.status = d.get('status', 'active')
+                computers.append(LaptopAdapter(doc.id, data))
+        except Exception as e:
+            print(f"Error fetching laptops: {e}")
+            
     total_computers = len(computers)
-    
     return render_template('user/computer_management.html', 
                          computers=computers,
                          total_computers=total_computers)
     
-@user_bp.route('/update-laptop-status/<int:laptop_id>', methods=['POST'])
+@user_bp.route('/update-laptop-status/<string:laptop_id>', methods=['POST'])
+@login_required
 def update_laptop_status(laptop_id):
     data = request.get_json()
-    laptop = Laptop.query.get_or_404(laptop_id)
-    
     if data['status'] not in ['active', 'frozen']:
         return jsonify({'success': False, 'error': 'Invalid status'}), 400
     
-    laptop.status = data['status']
-    db.session.commit()
-    return jsonify({'success': True})
+    from firebase_config import db_firestore
+    if db_firestore is not None:
+        try:
+            db_firestore.collection('laptops').document(laptop_id).update({
+                'status': data['status']
+            })
+            return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+    return jsonify({'success': False, 'error': 'Database Connection Error'}), 500
 
-@user_bp.route('/delete-laptop/<int:laptop_id>', methods=['DELETE'])
+@user_bp.route('/delete-laptop/<string:laptop_id>', methods=['DELETE'])
+@login_required
 def delete_laptop(laptop_id):
-    laptop = Laptop.query.get_or_404(laptop_id)
-    
-    try:
-        db.session.delete(laptop)
-        db.session.commit()
-        return jsonify({'success': True})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+    from firebase_config import db_firestore
+    if db_firestore is not None:
+        try:
+            db_firestore.collection('laptops').document(laptop_id).delete()
+            return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+    return jsonify({'success': False, 'error': 'Database Connection Error'}), 500
 
 
 # Configure export directory and filename (add this at the top of your file)
@@ -254,55 +304,73 @@ EXPORT_FILENAME = "browser_history.xlsx"
 os.makedirs(EXPORT_DIR, exist_ok=True)  # Create directory if it doesn't exist
 
 def get_user_session_windows(username):
-    """Helper to find all login/logout session windows for a given username"""
-    from models import User, AuthLog
+    """Helper to find all login/logout session windows for a given username from Firestore"""
     from datetime import datetime
     
-    main_user = User.query.filter_by(username=username).first()
-    if not main_user:
+    global_users = FirebaseDB.get_global_users()
+    target_user = None
+    for gu in global_users:
+        if gu.get('username') == username:
+            target_user = gu
+            break
+            
+    if not target_user:
         return []
         
-    logs = AuthLog.query.filter_by(user_id=main_user.id)\
-                  .filter(AuthLog.action.in_(['login_success', 'logout']))\
-                  .order_by(AuthLog.timestamp.asc()).all()
+    user_id = target_user.get('id') or target_user.get('user_id')
+    user_email = target_user.get('email')
+    
+    all_logs = FirebaseDB.get_all_auth_logs(limit=2000)
+    
+    user_logs = []
+    for log in all_logs:
+        if (user_email and log.get('email') == user_email) or \
+           (user_id and str(log.get('user_id')) == str(user_id)):
+            user_logs.append(log)
+            
+    def get_log_time(l):
+        t = l.get('timestamp')
+        if isinstance(t, datetime):
+            return t.replace(tzinfo=None) if t.tzinfo is not None else t
+        elif isinstance(t, str):
+            try:
+                return datetime.strptime(t[:19], '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                pass
+        return datetime.min
+        
+    user_logs.sort(key=get_log_time)
     
     session_windows = []
-    for i, log in enumerate(logs):
-        if log.action == 'login_success':
-            start_time = log.timestamp
-            # End time is the next logout OR the next login_success OR now
+    for i, log in enumerate(user_logs):
+        if log.get('action') == 'login_success':
+            start_time = get_log_time(log)
+            if start_time == datetime.min:
+                continue
             end_time = datetime.utcnow()
-            for next_log in logs[i+1:]:
-                if next_log.action in ['logout', 'login_success']:
-                    end_time = next_log.timestamp
-                    break
+            for next_log in user_logs[i+1:]:
+                if next_log.get('action') in ['logout', 'login_success']:
+                    t_next = get_log_time(next_log)
+                    if t_next != datetime.min:
+                        end_time = t_next
+                        break
             session_windows.append((start_time, end_time))
     return session_windows
 
 @user_bp.route('/visited-webs', methods=['GET', 'POST'])
+@login_required
 def visited_webs():
-    # If Admin, fetch all users from the User table to populate the dropdown
     all_users = []
     if current_user.is_authenticated and current_user.role == 'Admin':
-        # Get local users
-        local_users = {u.username: u for u in User.query.filter_by(role='User').all()}
-        # Get global users from Firebase
         global_users_data = FirebaseDB.get_global_users()
-        
-        # Merge them (prioritizing global data for a complete view)
-        merged_users = {}
-        for u in local_users.values():
-            merged_users[u.username] = {'username': u.username, 'email': u.email}
-        for u in global_users_data:
-            if u.get('role') == 'User' and u.get('username'):
-                uname = u['username']
-                merged_users[uname] = {
-                    'username': uname,
-                    'email': u.get('email', 'Global User')
-                }
-        
-        # Return a list of sorted user dictionaries for the dropdown
-        all_users = [merged_users[uname] for uname in sorted(merged_users.keys())]
+        all_users = []
+        for gu in global_users_data:
+            if gu.get('role') == 'User' and gu.get('username'):
+                all_users.append({
+                    'username': gu['username'],
+                    'email': gu.get('email', 'Global User')
+                })
+        all_users = sorted(all_users, key=lambda x: x['username'])
     
     username = (
         request.form.get('username')
@@ -313,18 +381,34 @@ def visited_webs():
     histories = []
 
     if request.method == 'POST' and username and username != "Guest":
-        # Create or get user
-        user = Users.query.filter_by(username=username).first()
-        if not user:
-            user = Users(username=username)
-            db.session.add(user)
-            db.session.commit()
+        global_users = FirebaseDB.get_global_users()
+        user_id = None
+        for gu in global_users:
+            if gu.get('username') == username:
+                user_id = gu.get('id') or gu.get('user_id')
+                break
+        if not user_id:
+            user_id = username
 
-        # Clear existing history if requested
+        # Clear existing history if requested from Firestore
         if request.form.get('clear_existing') == 'on':
-            BrowserHistory.query.filter_by(user_id=user.id).delete()
-            db.session.commit()
-            flash('Existing history cleared', 'info')
+            try:
+                from firebase_config import db_firestore
+                if db_firestore is not None:
+                    batch = db_firestore.batch()
+                    docs = db_firestore.collection('browser_history').where('user_id', '==', user_id).stream()
+                    for d in docs:
+                        batch.delete(d.reference)
+                    docs_str = db_firestore.collection('browser_history').where('user_id', '==', str(user_id)).stream()
+                    for d in docs_str:
+                        batch.delete(d.reference)
+                    docs_uname = db_firestore.collection('browser_history').where('username', '==', username).stream()
+                    for d in docs_uname:
+                        batch.delete(d.reference)
+                    batch.commit()
+                flash('Existing history cleared from Firestore', 'info')
+            except Exception as e:
+                print(f"Error clearing history: {e}")
 
         # Get this user's login sessions to ensure we only attribute history they actually visited
         session_windows = get_user_session_windows(username)
@@ -335,31 +419,24 @@ def visited_webs():
         history_data = []  # Store data for Excel export
 
         for browser, path in browser_paths:
-            # Extract ALL history first (as a list of dictionaries)
-            raw_items = extract_history_from_browser(browser, path, user.id)
+            # Extract ALL history first
+            raw_items = extract_history_from_browser(browser, path, user_id)
             
             # FILTER: Only keep items that happened during an active session for this user
             items = []
             for item_dict in raw_items:
                 visit_time = item_dict['last_visit_time']
-                
                 is_valid_session = False
                 for start, end in session_windows:
                     if start <= visit_time <= end:
                         is_valid_session = True
                         break
-                
                 if is_valid_session:
                     items.append(item_dict)
-                # If not a valid session, we simply don't add it to 'items', 
-                # effectively discarding the old data for this user.
             
             total_items += len(items)
-
             
             for item in items:
-                history = BrowserHistory(**item)
-                db.session.add(history)
                 history_data.append({
                     'username': username,
                     'Browser': browser,
@@ -369,13 +446,12 @@ def visited_webs():
                     'Last Visit': item['last_visit_time'].strftime('%Y-%m-%d %H:%M:%S')
                 })
 
-            db.session.commit()
-
+        if history_data:
             # Sync to Firebase in background
             import threading
             threading.Thread(
                 target=FirebaseDB.save_browser_history,
-                args=(user.id, history_data),
+                args=(user_id, history_data),
                 daemon=True
             ).start()
 
@@ -397,50 +473,40 @@ def visited_webs():
 
     # Fetch history for display if user exists (handles both GET and POST)
     if username and username != "Guest":
-        user_record = Users.query.filter_by(username=username).first()
-        session_windows = get_user_session_windows(username)
-        
-        histories = []
-        if user_record:
-            if session_windows:
-                # Filter history by these windows
-                from sqlalchemy import or_
-                time_filters = [BrowserHistory.last_visit_time.between(s, e) for s, e in session_windows]
-                histories = BrowserHistory.query.filter_by(user_id=user_record.id)\
-                               .filter(or_(*time_filters))\
-                               .order_by(BrowserHistory.last_visit_time.desc())\
-                               .limit(300).all()
-            else:
-                histories = BrowserHistory.query.filter_by(user_id=user_record.id)\
-                               .order_by(BrowserHistory.last_visit_time.desc())\
-                               .limit(300).all()
-        
-        # If no local history found, try fetching from Firebase
-        if not histories:
-            global_history = FirebaseDB.get_browser_history_by_username(username)
-            if global_history:
-                from datetime import datetime
-                class FirebaseHistoryAdapter:
-                    def __init__(self, data):
-                        self.browser = data.get('Browser') or data.get('browser') or ''
-                        self.title = data.get('Title') or data.get('title') or ''
-                        self.url = data.get('URL') or data.get('url') or ''
-                        self.visit_count = data.get('Visit Count') or data.get('visit_count') or 1
-                        
-                        last_visit = data.get('Last Visit') or data.get('last_visit') or data.get('last_visit_time')
-                        if isinstance(last_visit, str):
-                            try:
-                                self.last_visit_time = datetime.strptime(last_visit, '%Y-%m-%d %H:%M:%S')
-                            except ValueError:
-                                self.last_visit_time = datetime.utcnow()
-                        elif last_visit:
-                            self.last_visit_time = last_visit
-                        else:
+        global_history = FirebaseDB.get_browser_history_by_username(username)
+        if global_history:
+            from datetime import datetime
+            class FirebaseHistoryAdapter:
+                def __init__(self, data):
+                    self.browser = data.get('Browser') or data.get('browser') or ''
+                    self.title = data.get('Title') or data.get('title') or ''
+                    self.url = data.get('URL') or data.get('url') or ''
+                    self.visit_count = data.get('Visit Count') or data.get('visit_count') or 1
+                    
+                    last_visit = data.get('Last Visit') or data.get('last_visit') or data.get('last_visit_time')
+                    if isinstance(last_visit, str):
+                        try:
+                            self.last_visit_time = datetime.strptime(last_visit, '%Y-%m-%d %H:%M:%S')
+                        except ValueError:
                             self.last_visit_time = datetime.utcnow()
+                    elif last_visit:
+                        if isinstance(last_visit, datetime) and last_visit.tzinfo is not None:
+                            self.last_visit_time = last_visit.replace(tzinfo=None)
+                        else:
+                            self.last_visit_time = last_visit
+                    else:
+                        self.last_visit_time = datetime.utcnow()
                             
-                histories = [FirebaseHistoryAdapter(h) for h in global_history]
+            histories = [FirebaseHistoryAdapter(h) for h in global_history]
+        else:
+            histories = []
     else:
         histories = []
+
+    return render_template('user/visited_webs.html',
+                           histories=histories,
+                           username=username,
+                           all_users=all_users)
 
     return render_template('user/visited_webs.html',
                            histories=histories,
@@ -696,28 +762,18 @@ auto_save_thread.start()
 
 @user_bp.route('/visited-applications', methods=['GET', 'POST'])
 def visited_applications():
-    # If Admin, fetch all users
+    # If Admin, fetch all users from Firebase
     all_users = []
     if current_user.is_authenticated and current_user.role == 'Admin':
-        # Get local users
-        local_users = {u.username: u for u in User.query.filter_by(role='User').all()}
-        # Get global users from Firebase
         global_users_data = FirebaseDB.get_global_users()
-        
-        # Merge them
-        merged_users = {}
-        for u in local_users.values():
-            merged_users[u.username] = {'username': u.username, 'email': u.email}
-        for u in global_users_data:
-            if u.get('role') == 'User' and u.get('username'):
-                uname = u['username']
-                merged_users[uname] = {
-                    'username': uname,
-                    'email': u.get('email', 'Global User')
-                }
-        
-        # Return a list of sorted user dictionaries for the dropdown
-        all_users = [merged_users[uname] for uname in sorted(merged_users.keys())]
+        all_users = []
+        for gu in global_users_data:
+            if gu.get('role') == 'User' and gu.get('username'):
+                all_users.append({
+                    'username': gu['username'],
+                    'email': gu.get('email', 'Global User')
+                })
+        all_users = sorted(all_users, key=lambda x: x['username'])
     
     if request.method == 'POST':
         try:
@@ -871,7 +927,7 @@ threat_patterns = {
     'trading': r'\b(forex|crypto|bitcoin|trading|binance|coinbase|kraken|mt[45])\b',
     'hacking': r'\b(hack|crack|keygen|cheat|exploit|bypass|ddos|injection)\b',
     'money': r'\b(western[\s-]?union|money[\s-]?gram|paypal|venmo|cash[\s-]?app)\b',
-    'cloud': r'\b(dropbox|google[\s-]?drive|mega(\.nz)?|onedrive|box(\.com)?)\b',
+    'cloud': r'\b(dropbox|google[\s-]?drive|mega(?:\.nz)?|onedrive|box(?:\.com)?)\b',
     'anonymous': r'\b(tor|vpn|proxy|anonymous|incognito|hide[\s-]?ip)\b',
     'shopping': r'\b(amazon|ebay|alibaba|etsy|shopify|walmart|target)\b',
     'job': r'\b(linkedin|indeed|monster|career|job|employment)\b',
@@ -898,15 +954,43 @@ synced_history_ids = set()
 def update_ml_pipeline():
     global ml_df
     try:
-        from models import db
-        query = """
-        SELECT b.id as history_id, u.username as Username, b.browser as Browser, b.url as URL, b.title as Title, 
-               b.visit_count as "Visit Count", b.last_visit_time as "Last Visit"
-        FROM browser_history b
-        JOIN users u ON b.user_id = u.id
-        """
+        # Get all browser history from Firestore
+        history_docs = FirebaseDB.get_all_browser_history(limit=5000)
+        
+        # Build user maps for username lookup and ID lookup
+        global_users = FirebaseDB.get_global_users()
+        user_map = {}
+        uname_to_uid_map = {}
+        for gu in global_users:
+            uid = gu.get('id') or gu.get('user_id')
+            uname = gu.get('username')
+            if uid and uname:
+                user_map[str(uid)] = uname
+                uname_to_uid_map[uname] = uid
+                
+        # Parse into a list of dicts
+        history_list = []
+        for doc in history_docs:
+            uid = doc.get('user_id')
+            uname = doc.get('username') or doc.get('Username') or user_map.get(str(uid)) or 'Unknown'
+            
+            last_visit = doc.get('Last Visit') or doc.get('last_visit') or doc.get('last_visit_time')
+            if isinstance(last_visit, datetime) and last_visit.tzinfo is not None:
+                last_visit = last_visit.replace(tzinfo=None)
+                
+            history_list.append({
+                'history_id': doc.get('history_id') or doc.get('id') or 'firestore_doc',
+                'Username': uname,
+                'Browser': doc.get('Browser') or doc.get('browser') or 'unknown',
+                'URL': doc.get('URL') or doc.get('url') or '',
+                'Title': doc.get('Title') or doc.get('title') or '',
+                'Visit Count': doc.get('Visit Count') or doc.get('visit_count') or 1,
+                'Last Visit': last_visit
+            })
+            
         import pandas as pd
-        df = pd.read_sql(query, db.engine)
+        df = pd.DataFrame(history_list)
+        
         if df.empty:
             ml_df = pd.DataFrame(columns=['history_id', 'Username', 'Browser', 'Title', 'URL', 'Visit Count', 'Last Visit', 'anomaly_score', 'is_anomaly', 'risk_level', 'composite_risk', 'threat_score'])
             for cat in threat_patterns.keys():
@@ -999,10 +1083,8 @@ def update_ml_pipeline():
                 if h_id in synced_history_ids:
                     continue
                     
-                # Try to find the auth user id for this username
-                from models import User
-                u = User.query.filter_by(username=row['Username']).first()
-                uid = u.id if u else 0
+                # Try to find the auth user id for this username from in-memory map
+                uid = uname_to_uid_map.get(row['Username'], 0)
                 
                 # Limit to a maximum of 5 concurrent uploads per update to prevent Firestore quota exhaustion (429/504)
                 if sync_count >= 5:
@@ -1164,24 +1246,41 @@ def notifications():
     # Sort strictly by timestamp descending (most recent first)
     notifications.sort(key=lambda x: -pd.to_datetime(x['timestamp']).timestamp())
     
-    from models import UserActivity
     admin_messages = []
+    read_history_ids = set()
     if current_user.is_authenticated:
-        activities = UserActivity.query.filter_by(
-            user_id=current_user.id, 
-            activity_type='Admin Action'
-        ).order_by(UserActivity.timestamp.desc()).all()
-        admin_messages = [{'details': act.details, 'timestamp': act.timestamp.strftime('%Y-%m-%d %H:%M:%S')} for act in activities]
-        
-        # Filter out read alerts
-        read_activity_type = 'Admin Alert Read' if current_user.role == 'Admin' else 'User Alert Read'
-        read_activities = UserActivity.query.filter_by(
-            user_id=current_user.id,
-            activity_type=read_activity_type
-        ).all()
-        read_history_ids = {act.details for act in read_activities}
-        
-        notifications = [n for n in notifications if n['history_id'] not in read_history_ids]
+        try:
+            from firebase_config import db_firestore
+            if db_firestore is not None:
+                docs = db_firestore.collection('activities') \
+                    .where('user_id', '==', current_user.id) \
+                    .stream()
+                
+                activities = []
+                for d in docs:
+                    activities.append(d.to_dict())
+                
+                admin_acts = [act for act in activities if act.get('activity_type') == 'Admin Action']
+                def get_ts(x):
+                    t = x.get('timestamp')
+                    if isinstance(t, datetime):
+                        return t
+                    return datetime.min
+                admin_acts.sort(key=get_ts, reverse=True)
+                
+                admin_messages = []
+                for act in admin_acts:
+                    ts = act.get('timestamp')
+                    ts_str = ts.strftime('%Y-%m-%d %H:%M:%S') if isinstance(ts, datetime) else str(ts)
+                    admin_messages.append({'details': act.get('details'), 'timestamp': ts_str})
+                    
+                read_activity_type = 'Admin Alert Read' if current_user.role == 'Admin' else 'User Alert Read'
+                read_activities = [act for act in activities if act.get('activity_type') == read_activity_type]
+                read_history_ids = {str(act.get('details')) for act in read_activities}
+        except Exception as e:
+            print(f"Error fetching activities: {e}")
+            
+        notifications = [n for n in notifications if str(n['history_id']) not in read_history_ids]
     
     return render_template('user/notifications_alert.html', notifications=notifications, admin_messages=admin_messages)
 
@@ -1198,19 +1297,21 @@ def inject_notification_count():
         (df[[f'is_{cat}' for cat in target_categories]].any(axis=1))
     ]
     
-    # Filter out read alerts
     if current_user.is_authenticated:
-        from models import UserActivity
-        read_activity_type = 'Admin Alert Read' if current_user.role == 'Admin' else 'User Alert Read'
-        read_activities = UserActivity.query.filter_by(
-            user_id=current_user.id,
-            activity_type=read_activity_type
-        ).all()
-        read_history_ids = {act.details for act in read_activities}
-        
-        if not high_risk_df.empty:
-            high_risk_df = high_risk_df[~high_risk_df['history_id'].astype(str).isin(read_history_ids)]
-    
+        try:
+            from firebase_config import db_firestore
+            if db_firestore is not None:
+                read_activity_type = 'Admin Alert Read' if current_user.role == 'Admin' else 'User Alert Read'
+                docs = db_firestore.collection('activities') \
+                    .where('user_id', '==', current_user.id) \
+                    .where('activity_type', '==', read_activity_type) \
+                    .stream()
+                read_history_ids = {str(d.to_dict().get('details')) for d in docs}
+                if not high_risk_df.empty:
+                    high_risk_df = high_risk_df[~high_risk_df['history_id'].astype(str).isin(read_history_ids)]
+        except Exception as e:
+            print(f"Error checking read alerts in context_processor: {e}")
+            
     notification_count = len(high_risk_df)
     return dict(notification_count=notification_count)
 
@@ -1244,7 +1345,7 @@ def predict_user_behavior(file_path):
         'trading': r'\b(forex|crypto|bitcoin|trading|binance|coinbase|kraken|mt[45])\b',
         'hacking': r'\b(hack|crack|keygen|cheat|exploit|bypass|ddos|injection)\b',
         'money': r'\b(western[\s-]?union|money[\s-]?gram|paypal|venmo|cash[\s-]?app)\b',
-        'cloud': r'\b(dropbox|google[\s-]?drive|mega(\.nz)?|onedrive|box(\.com)?)\b',
+        'cloud': r'\b(dropbox|google[\s-]?drive|mega(?:\.nz)?|onedrive|box(?:\.com)?)\b',
         'anonymous': r'\b(tor|vpn|proxy|anonymous|incognito|hide[\s-]?ip)\b',
         'shopping': r'\b(amazon|ebay|alibaba|etsy|shopify|walmart|target)\b',
         'job': r'\b(linkedin|indeed|monster|career|job|employment)\b',
@@ -1344,6 +1445,7 @@ def user_behavior():
     )
 
 @user_bp.route('/take-action', methods=['POST'])
+@login_required
 def take_action():
     data = request.get_json()
     username = data.get('username')
@@ -1352,90 +1454,74 @@ def take_action():
     if not username or not action:
         return jsonify({'status': 'error', 'message': 'Missing parameters'}), 400
 
-    from models import db, User, UserActivity
-    
-    user_record = User.query.filter_by(username=username).first()
+    global_users = FirebaseDB.get_global_users()
+    user_record = None
+    for gu in global_users:
+        if gu.get('username') == username:
+            user_record = gu
+            break
+            
     if not user_record:
         return jsonify({'status': 'error', 'message': 'User not found'}), 404
         
-    if action == 'Warning':
-        activity = UserActivity(
-            user_id=user_record.id,
-            activity_type='Admin Action',
-            details='Warning: High risk activity detected on your account. Please review your activity.'
-        )
-        db.session.add(activity)
-        db.session.commit()
-        
-        # Sync to Firebase
-        FirebaseDB.save_activity(user_record.id, activity.activity_type, activity.details)
+    user_id = user_record.get('id') or user_record.get('user_id')
 
+    if action == 'Warning':
+        FirebaseDB.save_activity(
+            user_id,
+            'Admin Action',
+            'Warning: High risk activity detected on your account. Please review your activity.'
+        )
         return jsonify({'status': 'success', 'message': 'Warning sent.'})
         
     elif action == 'Suspend':
-        activity = UserActivity(
-            user_id=user_record.id,
-            activity_type='Admin Action',
-            details='Account Suspended: Your account has been suspended due to severe policy violations.'
+        FirebaseDB.save_activity(
+            user_id,
+            'Admin Action',
+            'Account Suspended: Your account has been suspended due to severe policy violations.'
         )
-        # user_record.role = 'suspended'
-        db.session.add(activity)
-        db.session.commit()
-
-        # Sync to Firebase
-        FirebaseDB.save_activity(user_record.id, activity.activity_type, activity.details)
-
+        FirebaseDB.save_user(user_id, {'role': 'Suspended'})
         return jsonify({'status': 'success', 'message': 'User suspended.'})
         
     elif action == 'Resolve':
-        activity = UserActivity(
-            user_id=user_record.id,
-            activity_type='Admin Action',
-            details='Threat Resolved: The previous security threat on your account has been marked as resolved.'
+        FirebaseDB.save_activity(
+            user_id,
+            'Admin Action',
+            'Threat Resolved: The previous security threat on your account has been marked as resolved.'
         )
-        db.session.add(activity)
-        db.session.commit()
-
-        # Sync to Firebase
-        FirebaseDB.save_activity(user_record.id, activity.activity_type, activity.details)
-
         return jsonify({'status': 'success', 'message': 'Threat resolved.'})
         
     return jsonify({'status': 'error', 'message': 'Invalid action'}), 400
 
 @user_bp.route('/mark-alert-read', methods=['POST'])
+@login_required
 def mark_alert_read():
-    if not current_user.is_authenticated:
-        return jsonify({'status': 'error', 'message': 'Not logged in'}), 401
-        
     data = request.get_json()
     history_ids = data.get('history_ids', [])
     
     if not history_ids:
         return jsonify({'status': 'error', 'message': 'No history IDs provided'}), 400
         
-    from models import db, UserActivity
-    
     activity_type = 'Admin Alert Read' if current_user.role == 'Admin' else 'User Alert Read'
     
-    for hid in history_ids:
-        # Check if already marked as read
-        existing = UserActivity.query.filter_by(
-            user_id=current_user.id,
-            activity_type=activity_type,
-            details=str(hid)
-        ).first()
-        
-        if not existing:
-            activity = UserActivity(
-                user_id=current_user.id,
-                activity_type=activity_type,
-                details=str(hid)
-            )
-            db.session.add(activity)
+    try:
+        from firebase_config import db_firestore
+        if db_firestore is not None:
+            docs = db_firestore.collection('activities') \
+                .where('user_id', '==', current_user.id) \
+                .where('activity_type', '==', activity_type) \
+                .stream()
+            existing_hids = {str(d.to_dict().get('details')) for d in docs}
             
-    db.session.commit()
-    return jsonify({'status': 'success', 'message': 'Alerts marked as read.'})
+            for hid in history_ids:
+                if str(hid) not in existing_hids:
+                    FirebaseDB.save_activity(current_user.id, activity_type, str(hid))
+            
+            return jsonify({'status': 'success', 'message': 'Alerts marked as read.'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+        
+    return jsonify({'status': 'error', 'message': 'Database Connection Error'}), 500
 
 # ==========================================
 # SECURE FILE TRANSFER MODULE
@@ -1467,29 +1553,38 @@ def scan_file_for_threats(filename, filepath):
 @user_bp.route('/secure-transfer', methods=['GET', 'POST'])
 @login_required
 def secure_transfer():
-    from models import AuthLog
-    
     if request.method == 'POST':
         receiver_email = request.form.get('receiver_email')
         file = request.files.get('file')
         
         if not receiver_email or not file or file.filename == '':
             flash('Recipient email and file are required.', 'error')
-            log = AuthLog(user_id=current_user.id, email=receiver_email, action='file_transfer_failed', ip_address=request.remote_addr, details='Missing recipient email or file.')
-            db.session.add(log)
-            db.session.commit()
+            log_data = {
+                'user_id': current_user.id,
+                'email': receiver_email,
+                'action': 'file_transfer_failed',
+                'ip_address': request.remote_addr,
+                'user_agent': request.user_agent.string,
+                'details': 'Missing recipient email or file.'
+            }
+            FirebaseDB.save_auth_log(log_data)
             return redirect(url_for('user.secure_transfer'))
             
-        receiver = User.query.filter_by(email=receiver_email).first()
+        receiver = FirebaseDB.get_user_by_email(receiver_email)
         if not receiver:
             flash(f'No registered user found with email {receiver_email}. Transfers are strictly restricted to registered users.', 'error')
-            log = AuthLog(user_id=current_user.id, email=receiver_email, action='file_transfer_failed', ip_address=request.remote_addr, details=f'Unregistered recipient email: {receiver_email}')
-            db.session.add(log)
-            db.session.commit()
+            log_data = {
+                'user_id': current_user.id,
+                'email': receiver_email,
+                'action': 'file_transfer_failed',
+                'ip_address': request.remote_addr,
+                'user_agent': request.user_agent.string,
+                'details': f'Unregistered recipient email: {receiver_email}'
+            }
+            FirebaseDB.save_auth_log(log_data)
             return redirect(url_for('user.secure_transfer'))
             
         filename = secure_filename(file.filename)
-        # Append timestamp to prevent overwrites
         safe_filename = f"{int(time.time())}_{filename}"
         file_path = os.path.join(SECURE_UPLOAD_FOLDER, safe_filename)
         file.save(file_path)
@@ -1497,82 +1592,128 @@ def secure_transfer():
         # Threat Detection Scan
         is_threat, threat_details = scan_file_for_threats(filename, file_path)
         
-        transfer = FileTransfer(
-            sender_id=current_user.id,
-            receiver_id=receiver.id,
-            filename=filename,
-            file_path=file_path,
-            file_size=os.path.getsize(file_path),
-            is_threat=is_threat,
-            threat_details=threat_details if is_threat else 'No threats detected',
-            status='blocked' if is_threat else 'delivered'
-        )
-        db.session.add(transfer)
-        db.session.commit() # Commit to get ID
+        # Generate a unique Firestore ID for the transfer
+        from firebase_config import db_firestore
+        transfer_ref = db_firestore.collection('file_transfers').document()
+        transfer_id = transfer_ref.id
         
-        # Sync to Firebase in background
-        import threading
-        user_id_for_sync = current_user.id
-        user_email_for_sync = current_user.email
-        def sync_transfer():
-            try:
-                FirebaseDB.save_file_transfer(transfer.id, {
-                    'sender_id': user_id_for_sync,
-                    'sender_email': user_email_for_sync,
-                    'receiver_id': receiver.id,
-                    'receiver_email': receiver.email,
-                    'filename': filename,
-                    'file_size': transfer.file_size,
-                    'is_threat': is_threat,
-                    'threat_details': transfer.threat_details,
-                    'status': transfer.status
-                })
-                
-                if is_threat:
-                    FirebaseDB.save_anomaly(
-                        user_id=user_id_for_sync,
-                        anomaly_type="Suspicious File Transfer",
-                        severity="High",
-                        details=f"Transfer of {filename} was blocked due to threat detection."
-                    )
-            except Exception as e:
-                print(f"File Transfer Firebase Sync Error: {e}")
+        transfer_data = {
+            'sender_id': current_user.id,
+            'sender_username': current_user.username,
+            'sender_email': current_user.email,
+            'receiver_id': receiver.id,
+            'receiver_username': receiver.username,
+            'receiver_email': receiver.email,
+            'filename': filename,
+            'file_path': file_path,
+            'file_size': os.path.getsize(file_path),
+            'is_threat': is_threat,
+            'threat_details': threat_details if is_threat else 'No threats detected',
+            'status': 'blocked' if is_threat else 'delivered'
+        }
         
-        threading.Thread(target=sync_transfer, daemon=True).start()
+        FirebaseDB.save_file_transfer(transfer_id, transfer_data)
         
         if is_threat:
-            log = AuthLog(user_id=current_user.id, email=receiver_email, action='file_transfer_threat_failed', ip_address=request.remote_addr, details=f'Threat blocked: {threat_details} (File: {filename})')
-            db.session.add(log)
+            FirebaseDB.save_anomaly(
+                user_id=current_user.id,
+                anomaly_type="Suspicious File Transfer",
+                severity="High",
+                details=f"Transfer of {filename} was blocked due to threat detection."
+            )
+            log_data = {
+                'user_id': current_user.id,
+                'email': receiver_email,
+                'action': 'file_transfer_threat_failed',
+                'ip_address': request.remote_addr,
+                'user_agent': request.user_agent.string,
+                'details': f'Threat blocked: {threat_details} (File: {filename})'
+            }
+            FirebaseDB.save_auth_log(log_data)
             flash(f'Threat Intercepted: {threat_details}. The file has been quarantined.', 'error')
         else:
             flash('File successfully transferred and cleared security scans.', 'success')
             
-        db.session.commit()
         return redirect(url_for('user.secure_transfer'))
 
-    # GET request - load inbox and outbox
-    inbox = FileTransfer.query.filter_by(receiver_id=current_user.id).order_by(FileTransfer.timestamp.desc()).all()
-    outbox = FileTransfer.query.filter_by(sender_id=current_user.id).order_by(FileTransfer.timestamp.desc()).all()
+    # GET request - load inbox and outbox from Firestore
+    inbox = []
+    outbox = []
+    from firebase_config import db_firestore
+    if db_firestore is not None:
+        try:
+            inbox_docs = db_firestore.collection('file_transfers') \
+                .where('receiver_id', '==', current_user.id) \
+                .stream()
+            outbox_docs = db_firestore.collection('file_transfers') \
+                .where('sender_id', '==', current_user.id) \
+                .stream()
+            
+            class Entity:
+                def __init__(self, username, email):
+                    self.username = username
+                    self.email = email
+
+            class TransferAdapter:
+                def __init__(self, doc_id, d):
+                    self.id = doc_id
+                    self.sender_id = d.get('sender_id')
+                    self.sender_username = d.get('sender_username') or d.get('sender_email') or 'Unknown'
+                    self.receiver_id = d.get('receiver_id')
+                    self.receiver_username = d.get('receiver_username') or d.get('receiver_email') or 'Unknown'
+                    self.sender = Entity(d.get('sender_username') or d.get('sender_email') or 'Unknown', d.get('sender_email') or 'Unknown')
+                    self.receiver = Entity(d.get('receiver_username') or d.get('receiver_email') or 'Unknown', d.get('receiver_email') or 'Unknown')
+                    self.filename = d.get('filename', '')
+                    self.file_path = d.get('file_path', '')
+                    self.file_size = d.get('file_size', 0)
+                    self.is_threat = d.get('is_threat', False)
+                    self.threat_details = d.get('threat_details', '')
+                    self.status = d.get('status', 'pending')
+                    
+                    t = d.get('timestamp')
+                    if isinstance(t, datetime):
+                        self.timestamp = t.replace(tzinfo=None) if t.tzinfo is not None else t
+                    else:
+                        self.timestamp = datetime.utcnow()
+                        
+            inbox = [TransferAdapter(d.id, d.to_dict()) for d in inbox_docs]
+            outbox = [TransferAdapter(d.id, d.to_dict()) for d in outbox_docs]
+            
+            inbox.sort(key=lambda x: x.timestamp, reverse=True)
+            outbox.sort(key=lambda x: x.timestamp, reverse=True)
+        except Exception as e:
+            print(f"Error loading transfers: {e}")
     
     return render_template('user/file_transfer.html', inbox=inbox, outbox=outbox)
 
-@user_bp.route('/download-transfer/<int:transfer_id>')
+@user_bp.route('/download-transfer/<string:transfer_id>')
 @login_required
 def download_transfer(transfer_id):
-    transfer = FileTransfer.query.get_or_404(transfer_id)
+    from firebase_config import db_firestore
+    if db_firestore is None:
+        flash('Database connection failed.', 'error')
+        return redirect(url_for('user.secure_transfer'))
+        
+    doc = db_firestore.collection('file_transfers').document(transfer_id).get()
+    if not doc.exists:
+        flash('Transfer record not found.', 'error')
+        return redirect(url_for('user.secure_transfer'))
+        
+    transfer_data = doc.to_dict()
     
     # Security check: only receiver, sender or admin can download
-    if current_user.id not in [transfer.receiver_id, transfer.sender_id] and current_user.role != 'Admin':
+    if current_user.id not in [transfer_data.get('receiver_id'), transfer_data.get('sender_id')] and current_user.role != 'Admin':
         flash('Unauthorized access.', 'error')
         return redirect(url_for('user.secure_transfer'))
         
     # Block downloading of threats unless it's an admin (or block entirely for safety)
-    if transfer.is_threat and current_user.role != 'Admin':
+    if transfer_data.get('is_threat') and current_user.role != 'Admin':
         flash('This file has been quarantined by the security system and cannot be downloaded.', 'error')
         return redirect(url_for('user.secure_transfer'))
         
-    if not os.path.exists(transfer.file_path):
+    file_path = transfer_data.get('file_path')
+    if not file_path or not os.path.exists(file_path):
         flash('File not found on server.', 'error')
         return redirect(url_for('user.secure_transfer'))
         
-    return send_file(transfer.file_path, as_attachment=True, download_name=transfer.filename)
+    return send_file(file_path, as_attachment=True, download_name=transfer_data.get('filename'))

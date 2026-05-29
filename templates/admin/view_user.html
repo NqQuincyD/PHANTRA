@@ -88,7 +88,7 @@
                             <div class="flex justify-between items-start mb-1">
                                 <div class="text-[10px] font-mono text-alert/70 uppercase tracking-tighter">
                                     {% if act.timestamp %}
-                                        {{ act.timestamp.strftime('%Y-%m-%d %H:%M:%S') if hasattr(act.timestamp, 'strftime') else act.timestamp }}
+                                        {{ act.timestamp.strftime('%Y-%m-%d %H:%M:%S') if act.timestamp.strftime is defined else act.timestamp }}
                                     {% else %}
                                         TIMESTAMP_UNKNOWN
                                     {% endif %}

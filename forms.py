@@ -40,8 +40,9 @@ class RegistrationForm(FlaskForm):
         if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
             raise ValidationError("Invalid email address format")
         
-        # Check if email already exists
-        if User.query.filter_by(email=email).first():
+        # Check if email already exists in Firestore
+        from utils.firebase_db import FirebaseDB
+        if FirebaseDB.get_user_by_email(email):
             raise ValidationError("Email already registered")
         
         # Role-specific email validation
@@ -58,7 +59,10 @@ class RegistrationForm(FlaskForm):
         if not re.match(r'^[a-zA-Z0-9_]+$', username):
             raise ValidationError("Username can only contain letters, numbers, and underscores")
         
-        if User.query.filter_by(username=username).first():
+        # Check if username already exists in Firestore
+        from utils.firebase_db import FirebaseDB
+        global_users = FirebaseDB.get_global_users()
+        if any(gu.get('username') == username for gu in global_users):
             raise ValidationError("Username already taken")
 
     def validate_password(self, field):
@@ -95,8 +99,23 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
     def validate_email(self, field):
-        """Ensure the email is valid and exists in the database."""
+        """Ensure the email is valid and exists in Firestore."""
         email = field.data
-        user = User.query.filter_by(email=email).first()
+        from utils.firebase_db import FirebaseDB
+        user = FirebaseDB.get_user_by_email(email)
         if not user:
             raise ValidationError("Email not registered")
+
+
+class LaptopRegistrationForm(FlaskForm):
+    full_name = StringField('Operator Full Name', validators=[DataRequired(), Length(max=100)])
+    email = StringField('Email', validators=[DataRequired(), Email(), Length(max=100)])
+    laptop_name = StringField('Laptop Name (Manufacturer)', validators=[DataRequired(), Length(max=50)])
+    laptop_model = StringField('Laptop Model', validators=[DataRequired(), Length(max=50)])
+    serial_number = StringField('Serial Number', validators=[DataRequired(), Length(max=50)])
+    laptop_os = SelectField('Operating System', choices=[
+        ('Windows', 'Windows'),
+        ('macOS', 'macOS'),
+        ('Linux', 'Linux')
+    ], validators=[DataRequired()])
+    submit = SubmitField('Commit to Registry')

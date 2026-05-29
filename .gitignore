@@ -24,3 +24,8 @@ static/uploads/*
 # OS
 .DS_Store
 Thumbs.db
+
+# Exclusions
+secure_uploads/
+scratch/
+

@@ -15,10 +15,9 @@ app.config.from_object(Config)
 login_manager = LoginManager(app)
 login_manager.login_view = 'auth.login'
 
-init_db(app)
+# init_db(app)  # Removed SQLite init
 login_manager.init_app(app)
-migrate = Migrate(app, db)
-    
+# migrate = Migrate(app, db)  # Removed SQLite migration
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(user_bp, url_prefix='/user')
@@ -27,8 +26,8 @@ app.register_blueprint(adm_bp, url_prefix='/admin')
 
 @login_manager.user_loader
 def load_user(user_id):
-    from models import User, db
-    return db.session.get(User, int(user_id))
+    from utils.firebase_db import FirebaseDB
+    return FirebaseDB.get_user_by_id(user_id)
 
 if __name__ == '__main__':
  
