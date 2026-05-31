@@ -29,3 +29,9 @@ Thumbs.db
 secure_uploads/
 scratch/
 
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
